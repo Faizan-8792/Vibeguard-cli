@@ -1,193 +1,194 @@
 /**
- * Flow Analyzer — execution flows and structural graph intelligence.
+ * Flow analyzer — execution flows and deeper graph intelligence.
  *
- * - Flows: trace forward import/call chains from entry points (routes, CLI,
- *   index, tests), scored by a criticality heuristic (depth × breadth).
- * - Bridges: nodes whose removal would most fragment the graph, approximated by
- *   an efficient flow-betweenness over entrypoint→leaf paths.
- * - Knowledge gaps: isolated nodes, untested hotspots, and thin areas.
- *
- * Pure-graph and deterministic: all functions take a GraphData and return data.
+ * Three capabilities, all pure over an already-built graph:
+ *  1. Execution flows: trace call chains from entry points (routes, CLI, tests,
+ *     main/index) and rank them by criticality.
+ *  2. Bridge detection: approximate betweenness centrality to find architectural
+ *     chokepoints — nodes that sit on many shortest paths.
+ *  3. Knowledge gaps: isolated nodes, untested hotspots, and thin coupling.
  */
-
 import type { GraphData, GraphNode } from './graph-builder.js';
 
 export interface ExecutionFlow {
-  id: number;
-  entryPoint: string;
-  /** Ordered files visited along the deepest forward chain from the entry. */
-  path: string[];
+  entry: string;
+  /** Files in the flow, in BFS order from the entry point. */
+  members: string[];
   depth: number;
-  nodeCount: number;
-  /** 0-100 criticality: deeper, wider flows from real entry points score higher. */
+  /** Criticality = reachable size × entry-kind weight. */
   criticality: number;
+  kind: string;
 }
 
 export interface BridgeNode {
   file: string;
-  /** Higher = more central as a connector between otherwise separate areas. */
+  /** Approximate betweenness score (count of shortest paths passing through). */
   score: number;
 }
 
 export interface KnowledgeGaps {
-  isolatedNodes: string[];
+  isolatedFiles: string[];
   untestedHotspots: Array<{ file: string; dependents: number }>;
-  summary: { isolated: number; untestedHotspots: number };
+  thinlyConnected: string[];
 }
 
-const ROUTE_PREFIXES = ['pages/', 'app/', 'routes/', 'src/pages/', 'src/app/', 'src/routes/'];
-const ENTRY_BASENAMES = new Set(['index.ts', 'index.tsx', 'index.js', 'main.ts', 'main.go', 'cli.ts']);
-
-function isTestPath(file: string): boolean {
-  return (
-    /\.(test|spec)\./.test(file) ||
-    /_test\.(go|py)$/.test(file) ||
-    file.includes('/__tests__/') ||
-    file.includes('/tests/')
-  );
+export interface FlowAnalysis {
+  flows: ExecutionFlow[];
+  bridges: BridgeNode[];
+  gaps: KnowledgeGaps;
 }
 
-/**
- * Heuristically identify entry-point files from graph structure alone:
- * route files, conventional index/main/cli files, and test files.
- */
-export function detectEntryPoints(graph: GraphData): string[] {
-  const entries: string[] = [];
-  for (const key of Object.keys(graph.nodes)) {
-    const base = key.split('/').pop() ?? key;
-    const isRoute = ROUTE_PREFIXES.some((p) => key.startsWith(p));
-    if (isRoute || ENTRY_BASENAMES.has(base) || isTestPath(key)) {
-      entries.push(key);
+function isTestFile(file: string): boolean {
+  return /\.(test|spec)\.[tj]sx?$/.test(file) || /(^|\/)(__tests__|tests?)\//.test(file);
+}
+
+/** Classify a node as an entry point and return its criticality weight (0 = not an entry). */
+function entryKind(node: GraphNode): { kind: string; weight: number } {
+  const f = node.file.toLowerCase();
+  if (isTestFile(f)) return { kind: 'test', weight: 1 };
+  if (/(^|\/)(cli|main|index)\.[tj]sx?$/.test(f)) return { kind: 'entrypoint', weight: 5 };
+  if (/(^|\/)(pages|app|routes?)\//.test(f)) return { kind: 'route', weight: 4 };
+  if (/(^|\/)commands?\//.test(f)) return { kind: 'command', weight: 3 };
+  // A node nobody imports but which imports others is a likely top-level entry.
+  if (node.dependents.length === 0 && node.imports.length > 0) return { kind: 'orphan-entry', weight: 2 };
+  return { kind: '', weight: 0 };
+}
+
+/** Trace the set of files reachable from an entry via import edges (forward BFS). */
+function traceFlow(graph: GraphData, entry: string, maxDepth = 15): { members: string[]; depth: number } {
+  const visited = new Set<string>([entry]);
+  const members: string[] = [entry];
+  let depth = 0;
+  let frontier = [entry];
+
+  while (frontier.length > 0 && depth < maxDepth) {
+    const next: string[] = [];
+    for (const file of frontier) {
+      const node = graph.nodes[file];
+      if (!node) continue;
+      for (const imp of node.imports) {
+        if (visited.has(imp) || !graph.nodes[imp]) continue;
+        visited.add(imp);
+        members.push(imp);
+        next.push(imp);
+      }
     }
+    if (next.length > 0) depth++;
+    frontier = next;
   }
-  // Fallback: nodes that nothing depends on (roots) are natural entry points.
-  if (entries.length === 0) {
-    for (const [key, node] of Object.entries(graph.nodes)) {
-      if (node.dependents.length === 0 && node.imports.length > 0) entries.push(key);
-    }
-  }
-  return entries;
+
+  return { members, depth };
 }
 
-/**
- * Trace the deepest forward import chain from an entry point (DFS, cycle-safe).
- */
-function traceFlow(entry: string, nodes: Map<string, GraphNode>): string[] {
-  let best: string[] = [];
-
-  const dfs = (current: string, path: string[], visited: Set<string>): void => {
-    const node = nodes.get(current);
-    if (!node || node.imports.length === 0) {
-      if (path.length > best.length) best = [...path];
-      return;
-    }
-    let extended = false;
-    for (const imp of node.imports) {
-      if (visited.has(imp) || !nodes.has(imp)) continue;
-      extended = true;
-      visited.add(imp);
-      dfs(imp, [...path, imp], visited);
-      visited.delete(imp);
-    }
-    if (!extended && path.length > best.length) best = [...path];
-  };
-
-  dfs(entry, [entry], new Set([entry]));
-  return best;
-}
-
-/**
- * Compute execution flows from detected entry points, sorted by criticality.
- */
-export function computeFlows(graph: GraphData, opts: { limit?: number } = {}): ExecutionFlow[] {
-  const nodes = new Map<string, GraphNode>(Object.entries(graph.nodes));
-  const entries = detectEntryPoints(graph);
+/** Detect execution flows from all entry points, sorted by criticality. */
+export function detectFlows(graph: GraphData, limit = 50): ExecutionFlow[] {
   const flows: ExecutionFlow[] = [];
 
-  let id = 1;
-  for (const entry of entries) {
-    const path = traceFlow(entry, nodes);
-    const depth = path.length;
-    if (depth <= 1) continue; // not a meaningful flow
+  for (const node of Object.values(graph.nodes)) {
+    const { kind, weight } = entryKind(node);
+    if (weight === 0) continue;
 
-    const uniqueFiles = new Set(path);
-    const entryNode = nodes.get(entry);
-    const breadth = entryNode ? entryNode.imports.length : 0;
-
-    // Criticality: depth dominates, breadth adds, route/cli entries get a boost.
-    const base = key_isRouteLike(entry) ? 20 : 0;
-    const criticality = Math.max(0, Math.min(100, Math.round(base + depth * 12 + breadth * 3)));
-
+    const { members, depth } = traceFlow(graph, node.file);
     flows.push({
-      id: id++,
-      entryPoint: entry,
-      path,
+      entry: node.file,
+      members,
       depth,
-      nodeCount: uniqueFiles.size,
-      criticality,
+      criticality: members.length * weight,
+      kind,
     });
   }
 
-  flows.sort((a, b) => b.criticality - a.criticality || b.depth - a.depth || a.entryPoint.localeCompare(b.entryPoint));
-  const limit = opts.limit ?? 50;
-  return flows.slice(0, limit);
-}
-
-function key_isRouteLike(file: string): boolean {
-  const base = file.split('/').pop() ?? file;
-  return ROUTE_PREFIXES.some((p) => file.startsWith(p)) || ENTRY_BASENAMES.has(base);
+  return flows.sort((a, b) => b.criticality - a.criticality).slice(0, limit);
 }
 
 /**
- * Approximate architectural bridges: nodes that lie on many entrypoint→leaf
- * paths. We accumulate a betweenness-like count by walking each flow path and
- * crediting interior nodes. O(entries × path length) — cheap and deterministic.
+ * Approximate betweenness centrality via sampled BFS shortest paths.
+ * Counts, for each node, how many shortest paths between other node pairs run
+ * through it. Sampling keeps it O(sample × E) rather than full O(V × E).
  */
-export function computeBridges(graph: GraphData, opts: { topN?: number } = {}): BridgeNode[] {
-  const flows = computeFlows(graph, { limit: 1000 });
-  const counts = new Map<string, number>();
+export function detectBridges(graph: GraphData, topN = 10): BridgeNode[] {
+  const files = Object.keys(graph.nodes);
+  if (files.length === 0) return [];
 
-  for (const flow of flows) {
-    // Interior nodes (exclude the entry and the final leaf) are the connectors.
-    for (let i = 1; i < flow.path.length - 1; i++) {
-      const file = flow.path[i];
-      counts.set(file, (counts.get(file) ?? 0) + 1);
-    }
-  }
+  const through = new Map<string, number>();
+  // Sample up to 60 source nodes for tractability on large graphs.
+  const sampleSize = Math.min(files.length, 60);
+  const step = Math.max(1, Math.floor(files.length / sampleSize));
 
-  const bridges: BridgeNode[] = [...counts.entries()].map(([file, score]) => ({ file, score }));
-  bridges.sort((a, b) => b.score - a.score || a.file.localeCompare(b.file));
-  return bridges.slice(0, opts.topN ?? 10);
-}
-
-/**
- * Identify structural weaknesses: isolated nodes (no imports and no
- * dependents) and untested hotspots (high fan-in, no test among dependents).
- */
-export function computeKnowledgeGaps(graph: GraphData, opts: { hotspotThreshold?: number } = {}): KnowledgeGaps {
-  const threshold = opts.hotspotThreshold ?? 5;
-  const isolated: string[] = [];
-  const untested: Array<{ file: string; dependents: number }> = [];
-
-  for (const [key, node] of Object.entries(graph.nodes)) {
-    if (isTestPath(key)) continue;
-
-    if (node.imports.length === 0 && node.dependents.length === 0) {
-      isolated.push(key);
-    }
-
-    if (node.dependents.length >= threshold) {
-      const hasTest = node.dependents.some(isTestPath);
-      if (!hasTest) untested.push({ file: key, dependents: node.dependents.length });
-    }
-  }
-
-  isolated.sort();
-  untested.sort((a, b) => b.dependents - a.dependents || a.file.localeCompare(b.file));
-
-  return {
-    isolatedNodes: isolated,
-    untestedHotspots: untested.slice(0, 20),
-    summary: { isolated: isolated.length, untestedHotspots: untested.length },
+  const neighbors = (file: string): string[] => {
+    const node = graph.nodes[file];
+    if (!node) return [];
+    return [...node.imports, ...node.dependents].filter((n) => graph.nodes[n]);
   };
+
+  for (let i = 0; i < files.length; i += step) {
+    const source = files[i];
+    // BFS recording predecessors for shortest-path reconstruction.
+    const dist = new Map<string, number>([[source, 0]]);
+    const prev = new Map<string, string | null>([[source, null]]);
+    const queue = [source];
+
+    while (queue.length > 0) {
+      const cur = queue.shift()!;
+      for (const nb of neighbors(cur)) {
+        if (!dist.has(nb)) {
+          dist.set(nb, dist.get(cur)! + 1);
+          prev.set(nb, cur);
+          queue.push(nb);
+        }
+      }
+    }
+
+    // Walk each discovered target back to source, crediting intermediate nodes.
+    for (const target of dist.keys()) {
+      if (target === source) continue;
+      let step2 = prev.get(target) ?? null;
+      while (step2 && step2 !== source) {
+        through.set(step2, (through.get(step2) ?? 0) + 1);
+        step2 = prev.get(step2) ?? null;
+      }
+    }
+  }
+
+  return [...through.entries()]
+    .map(([file, score]) => ({ file, score }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topN);
+}
+
+/** Identify structural weaknesses: isolated nodes, untested hotspots, thin coupling. */
+export function detectKnowledgeGaps(graph: GraphData): KnowledgeGaps {
+  const nodes = Object.values(graph.nodes);
+
+  const isolatedFiles = nodes
+    .filter((n) => n.imports.length === 0 && n.dependents.length === 0 && !isTestFile(n.file))
+    .map((n) => n.file);
+
+  const untestedHotspots = nodes
+    .filter((n) => n.dependents.length >= 5 && !n.dependents.some(isTestFile))
+    .sort((a, b) => b.dependents.length - a.dependents.length)
+    .slice(0, 10)
+    .map((n) => ({ file: n.file, dependents: n.dependents.length }));
+
+  const thinlyConnected = nodes
+    .filter((n) => !isTestFile(n.file) && n.imports.length + n.dependents.length === 1)
+    .map((n) => n.file)
+    .slice(0, 20);
+
+  return { isolatedFiles, untestedHotspots, thinlyConnected };
+}
+
+/** Run all flow-analysis capabilities at once. */
+export function analyzeFlows(graph: GraphData): FlowAnalysis {
+  return {
+    flows: detectFlows(graph),
+    bridges: detectBridges(graph),
+    gaps: detectKnowledgeGaps(graph),
+  };
+}
+
+/** Find which flows are affected by a set of changed files (feeds review). */
+export function affectedFlows(flows: ExecutionFlow[], changedFiles: string[]): ExecutionFlow[] {
+  const changed = new Set(changedFiles);
+  return flows.filter((flow) => flow.members.some((m) => changed.has(m)));
 }

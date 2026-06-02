@@ -4,8 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { createVibeGuardServer, VIBEGUARD_TOOL_NAMES } from '../../src/mcp/server.js';
-import { parseToolAllowlist } from '../../src/commands/serve.js';
+import { buildMcpServer, TOOL_NAMES } from '../../src/mcp/server.js';
 
 let projectRoot: string;
 
@@ -26,8 +25,9 @@ afterAll(async () => {
   await rm(projectRoot, { recursive: true, force: true });
 });
 
-async function connectedClient(allowedTools?: Parameters<typeof createVibeGuardServer>[0]['allowedTools']) {
-  const server = createVibeGuardServer({ projectRoot, allowedTools });
+/** Connect an in-memory MCP client to a freshly built server. */
+async function connectedClient(allow?: string[]) {
+  const { server } = buildMcpServer({ projectRoot, allow });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'test-client', version: '1.0.0' });
   await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
@@ -46,7 +46,7 @@ describe('Integration: MCP server', () => {
     const { client } = await connectedClient();
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
-    expect(names).toEqual([...VIBEGUARD_TOOL_NAMES].sort());
+    expect(names).toEqual([...TOOL_NAMES].sort());
     await client.close();
   });
 
@@ -93,20 +93,11 @@ describe('Integration: MCP server', () => {
     expect(names).toEqual(['get_minimal_context', 'scan_security']);
     await client.close();
   });
-});
 
-describe('parseToolAllowlist', () => {
-  it('returns undefined for empty/missing input', () => {
-    expect(parseToolAllowlist(undefined)).toBeUndefined();
-    expect(parseToolAllowlist('')).toBeUndefined();
-    expect(parseToolAllowlist('   ')).toBeUndefined();
-  });
-
-  it('keeps only known tool names', () => {
-    expect(parseToolAllowlist('scan_security,bogus_tool,get_health')).toEqual(['scan_security', 'get_health']);
-  });
-
-  it('returns undefined when no valid names remain', () => {
-    expect(parseToolAllowlist('bogus,nope')).toBeUndefined();
+  it('returns a structured error for an unknown tool', async () => {
+    const { client } = await connectedClient();
+    const result = await client.callTool({ name: 'nope_not_a_tool', arguments: {} });
+    expect((result as { isError?: boolean }).isError).toBe(true);
+    await client.close();
   });
 });

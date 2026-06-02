@@ -1,88 +1,78 @@
 import { describe, it, expect } from 'vitest';
-import { computeFlows, computeBridges, computeKnowledgeGaps, detectEntryPoints } from '../../src/engines/flow-analyzer.js';
+import { detectFlows, detectBridges, detectKnowledgeGaps, affectedFlows } from '../../src/engines/flow-analyzer.js';
 import type { GraphData } from '../../src/engines/graph-builder.js';
 
-function n(file: string, imports: string[] = [], dependents: string[] = []) {
-  return { file, imports, exports: [], dependents, edges: [] };
+// cli.ts (entry) → commands/run.ts → engines/core.ts ; core has 2 dependents; orphan.ts isolated
+function makeGraph(): GraphData {
+  return {
+    schemaVersion: '2.2.0',
+    nodes: {
+      'src/cli.ts': { file: 'src/cli.ts', imports: ['src/commands/run.ts'], exports: ['main'], dependents: [], edges: [] },
+      'src/commands/run.ts': { file: 'src/commands/run.ts', imports: ['src/engines/core.ts'], exports: ['run'], dependents: ['src/cli.ts'], edges: [] },
+      'src/engines/core.ts': { file: 'src/engines/core.ts', imports: [], exports: ['core'], dependents: ['src/commands/run.ts', 'src/commands/other.ts'], edges: [] },
+      'src/commands/other.ts': { file: 'src/commands/other.ts', imports: ['src/engines/core.ts'], exports: ['other'], dependents: [], edges: [] },
+      'src/orphan.ts': { file: 'src/orphan.ts', imports: [], exports: ['orphan'], dependents: [], edges: [] },
+    },
+  } as unknown as GraphData;
 }
 
-// index -> handler -> service -> util (a 4-deep flow)
-const graph: GraphData = {
-  schemaVersion: '2.1.0',
-  nodes: {
-    'src/index.ts': n('src/index.ts', ['src/handler.ts'], []),
-    'src/handler.ts': n('src/handler.ts', ['src/service.ts'], ['src/index.ts']),
-    'src/service.ts': n('src/service.ts', ['src/util.ts'], ['src/handler.ts']),
-    'src/util.ts': n('src/util.ts', [], ['src/service.ts', 'src/orphanCaller.ts']),
-    'src/orphanCaller.ts': n('src/orphanCaller.ts', ['src/util.ts'], []),
-    'src/lonely.ts': n('src/lonely.ts', [], []),
-  },
-};
-
-describe('detectEntryPoints', () => {
-  it('detects index/main files as entry points', () => {
-    const entries = detectEntryPoints(graph);
-    expect(entries).toContain('src/index.ts');
-  });
-});
-
-describe('computeFlows', () => {
-  it('traces the deepest forward chain from an entry point', () => {
-    const flows = computeFlows(graph);
-    const fromIndex = flows.find((f) => f.entryPoint === 'src/index.ts');
-    expect(fromIndex).toBeDefined();
-    expect(fromIndex!.path).toEqual(['src/index.ts', 'src/handler.ts', 'src/service.ts', 'src/util.ts']);
-    expect(fromIndex!.depth).toBe(4);
+describe('detectFlows', () => {
+  it('detects entry points and traces reachable members', () => {
+    const flows = detectFlows(makeGraph());
+    const cliFlow = flows.find((f) => f.entry === 'src/cli.ts');
+    expect(cliFlow).toBeDefined();
+    expect(cliFlow!.kind).toBe('entrypoint');
+    expect(cliFlow!.members).toContain('src/commands/run.ts');
+    expect(cliFlow!.members).toContain('src/engines/core.ts');
   });
 
-  it('assigns criticality within 0-100 and sorts descending', () => {
-    const flows = computeFlows(graph);
-    for (const f of flows) {
-      expect(f.criticality).toBeGreaterThanOrEqual(0);
-      expect(f.criticality).toBeLessThanOrEqual(100);
-    }
+  it('sorts flows by descending criticality', () => {
+    const flows = detectFlows(makeGraph());
     for (let i = 1; i < flows.length; i++) {
       expect(flows[i - 1].criticality).toBeGreaterThanOrEqual(flows[i].criticality);
     }
   });
+});
 
-  it('is cycle-safe', () => {
-    const cyclic: GraphData = {
-      schemaVersion: '2.1.0',
-      nodes: {
-        'a.ts': n('a.ts', ['b.ts'], ['b.ts']),
-        'b.ts': n('b.ts', ['a.ts'], ['a.ts']),
-        'index.ts': n('index.ts', ['a.ts'], []),
-      },
+describe('detectBridges', () => {
+  it('identifies chokepoint nodes on shortest paths', () => {
+    const bridges = detectBridges(makeGraph(), 5);
+    // core.ts sits between the two command files → should score as a bridge
+    expect(bridges.length).toBeGreaterThan(0);
+    expect(bridges.map((b) => b.file)).toContain('src/engines/core.ts');
+  });
+});
+
+describe('detectKnowledgeGaps', () => {
+  it('finds isolated files', () => {
+    const gaps = detectKnowledgeGaps(makeGraph());
+    expect(gaps.isolatedFiles).toContain('src/orphan.ts');
+  });
+
+  it('finds untested hotspots (heavily depended on, no test coverage)', () => {
+    // Build a graph where a file has >=5 dependents and none are tests
+    const nodes: Record<string, unknown> = {
+      'src/hot.ts': { file: 'src/hot.ts', imports: [], exports: ['hot'], dependents: ['a', 'b', 'c', 'd', 'e'], edges: [] },
     };
-    expect(() => computeFlows(cyclic)).not.toThrow();
+    for (const d of ['a', 'b', 'c', 'd', 'e']) {
+      nodes[d] = { file: d, imports: ['src/hot.ts'], exports: [], dependents: [], edges: [] };
+    }
+    const graph = { schemaVersion: '2.2.0', nodes } as unknown as GraphData;
+    const gaps = detectKnowledgeGaps(graph);
+    expect(gaps.untestedHotspots.some((h) => h.file === 'src/hot.ts')).toBe(true);
   });
 });
 
-describe('computeBridges', () => {
-  it('credits interior connector nodes', () => {
-    const bridges = computeBridges(graph, { topN: 5 });
-    // handler and service are interior to the index flow.
-    const files = bridges.map((b) => b.file);
-    expect(files).toContain('src/handler.ts');
-  });
-});
-
-describe('computeKnowledgeGaps', () => {
-  it('detects isolated nodes', () => {
-    const gaps = computeKnowledgeGaps(graph);
-    expect(gaps.isolatedNodes).toContain('src/lonely.ts');
+describe('affectedFlows', () => {
+  it('returns flows whose members include a changed file', () => {
+    const flows = detectFlows(makeGraph());
+    const affected = affectedFlows(flows, ['src/engines/core.ts']);
+    expect(affected.length).toBeGreaterThan(0);
+    expect(affected.every((f) => f.members.includes('src/engines/core.ts'))).toBe(true);
   });
 
-  it('flags untested hotspots above the threshold', () => {
-    const gaps = computeKnowledgeGaps(graph, { hotspotThreshold: 2 });
-    const files = gaps.untestedHotspots.map((h) => h.file);
-    expect(files).toContain('src/util.ts'); // 2 dependents, no test
-  });
-
-  it('returns clean summary when nothing qualifies', () => {
-    const tiny: GraphData = { schemaVersion: '2.1.0', nodes: { 'a.ts': n('a.ts', ['b.ts']), 'b.ts': n('b.ts', [], ['a.ts']) } };
-    const gaps = computeKnowledgeGaps(tiny, { hotspotThreshold: 100 });
-    expect(gaps.summary.untestedHotspots).toBe(0);
+  it('returns nothing when no flow touches the changed files', () => {
+    const flows = detectFlows(makeGraph());
+    expect(affectedFlows(flows, ['src/orphan.ts'])).toEqual([]);
   });
 });

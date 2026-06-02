@@ -10,7 +10,7 @@ cyberattacks, and cleans dead code reversibly — all locally, at zero token cos
 
 > v1.0 (Days 1–10) and post-v1.0 hardening are shipped and removed from this file.
 > Current baseline: health 93/100 (security 100, architecture 100, dead-code 92,
-> context-efficiency 80), **272 tests passing**, zero dependency cycles.
+> context-efficiency 80), **270 tests passing**, zero dependency cycles.
 >
 > **Phases 1–5 are now SHIPPED ✅** (see checkboxes below). Phases 6–8 remain planned.
 
@@ -57,11 +57,11 @@ VibeGuard command into a live agent tool instead of a "shell out and parse" inst
 *Pure-TypeScript indexed store + inverted-index FTS. NO native SQLite (honors Req 1.10 "no native compilation").*
 
 - [x] Task 2.1: Chose a zero-native-build approach — pure-TS index over the JSON graph instead of `better-sqlite3`
-- [x] Task 2.2: `src/engines/graph-index.ts` with O(1) keyed lookup + inverted index
-- [x] Task 2.3: Layered over the existing `graph.json` (no schema migration / back-compat break)
+- [x] Task 2.2: `src/engines/search-index.ts` — tokenized inverted index with keyed lookup
+- [x] Task 2.3: Persisted to `.vibeguard/search-index.json`, layered over `graph.json` (no migration / back-compat break)
 - [x] Task 2.4: Inverted-index FTS over node path + export names
-- [x] Task 2.5: camelCase/snake_case/path-aware tokenization with exact + prefix matching
-- [x] Task 2.6: Deterministic scoring with basename boost; covered by unit tests
+- [x] Task 2.5: camelCase/snake_case/path-aware tokenization with identifier-aware boost + exact-export bonus
+- [x] Task 2.6: Deterministic scoring; covered by unit tests
 
 ## Phase 3: Risk-Scored Change Review — SHIPPED ✅
 *code-review-graph's core value prop — paired with our security scan.*
@@ -72,7 +72,7 @@ VibeGuard command into a live agent tool instead of a "shell out and parse" inst
 - [x] Task 3.4: `vibeguard review [--base <ref>]` — risk-ranked items + test-coverage gaps
 - [x] Task 3.5: **Differentiator** — folds Security + Attack findings on changed files into the review
 - [x] Task 3.6: Token Savings panel (full-context baseline vs graph response)
-- [x] Task 3.7: `src/engines/token-savings.ts` estimate (verifier hook left for Phase 8)
+- [x] Task 3.7: Token-savings accounting computed inline in `change-detector.ts` (real-tokenizer `--verify` left for Phase 8)
 
 ## Phase 4: Execution Flows + Graph Intelligence — SHIPPED ✅
 - [x] Task 4.1: `src/engines/flow-analyzer.ts` — traces call chains from entry points, criticality-scored

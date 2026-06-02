@@ -1,172 +1,191 @@
 /**
- * Change Detector — risk-scored review of a set of changed files.
+ * Change detector — risk-scored review of a git diff.
  *
- * Given the changed files, the dependency graph, and importance scores, this
- * computes each change's "blast radius" (transitive dependents) and a risk
- * score, then ranks the review items. The pure-graph core (`analyzeChanges`)
- * takes plain inputs so it is fully unit-testable without git.
+ * Maps changed files to their blast radius (transitive dependents through the
+ * graph), scores each change by risk, flags test-coverage gaps, and — uniquely
+ * to VibeGuard — folds in security/attack findings on the changed files. This
+ * is the "code review" pillar that pairs the graph intelligence of
+ * code-review-graph with VibeGuard's security moat.
+ *
+ * Pure analysis over an already-built graph: zero file reads beyond the diff,
+ * zero tokens.
  */
-
 import type { GraphData, GraphNode } from './graph-builder.js';
 import type { ImportanceEntry } from './importance-analyzer.js';
+import type { SecurityIssue } from './security-scanner.js';
 
 export interface ReviewItem {
   file: string;
-  /** Number of transitive dependents reachable within `depth` hops. */
-  blastRadius: number;
-  /** Direct dependents (1 hop). */
-  directDependents: number;
-  importance: number;
-  /** True when the file has no test among its dependents/co-located tests. */
-  testGap: boolean;
-  /** 0-100 composite risk score (higher = review more carefully). */
+  /** Risk score (higher = review first). */
   risk: number;
-  /** Human-readable reasons contributing to the risk score. */
-  reasons: string[];
+  /** Number of files transitively affected by this change. */
+  blastRadius: number;
+  /** Importance score of the changed file (0 if unknown). */
+  importance: number;
+  /** True when nothing in the project tests/depends on this file. */
+  isolated: boolean;
+  /** True when no test file references this file. */
+  testGap: boolean;
+  /** Security/attack issue count located in this file. */
+  securityIssues: number;
 }
 
-export interface ChangeAnalysis {
+export interface ChangeReviewResult {
   base: string;
   changedFiles: string[];
-  /** Changed files that exist as nodes in the graph (others are new/untracked). */
-  analyzedFiles: string[];
+  /** Changed files that are not in the graph (new/untracked or excluded). */
+  unknownFiles: string[];
   reviewItems: ReviewItem[];
+  /** Union of all transitively affected files (the full blast radius). */
+  affectedFiles: string[];
   summary: {
     changed: number;
-    totalBlastRadius: number;
+    affected: number;
     highRisk: number;
     testGaps: number;
+    securityIssues: number;
+  };
+  /** Token-savings accounting vs reading the whole project. */
+  contextSavings: {
+    estimated: true;
+    fullContextTokens: number;
+    graphContextTokens: number;
+    savedTokens: number;
+    savedPercent: number;
   };
 }
 
-export interface AnalyzeChangesInput {
-  base: string;
-  changedFiles: string[];
-  graph: GraphData;
-  importance?: Record<string, ImportanceEntry>;
-  depth?: number;
-}
+const TOKENS_PER_GRAPH_NODE = 200;
+const TOKENS_PER_FILE_CONTENT = 1500;
 
-/** Whether a file path looks like a test file (used for test-gap detection). */
-function isTestPath(file: string): boolean {
-  return (
-    /\.(test|spec)\./.test(file) ||
-    /_test\.(go|py)$/.test(file) ||
-    /(^|\/)test_[^/]+\.py$/.test(file) ||
-    /Tests?\.java$/.test(file) ||
-    file.includes('/__tests__/') ||
-    file.includes('/tests/')
-  );
+/** Is this file path a test/spec file? */
+function isTestFile(file: string): boolean {
+  return /\.(test|spec)\.[tj]sx?$/.test(file) || /(^|\/)(__tests__|test|tests)\//.test(file);
 }
 
 /**
- * Compute the blast radius (transitive dependents) of a node via reverse-edge
- * BFS up to `depth` hops. Returns the set of reachable dependent file keys
- * (excluding the seed itself).
+ * Compute the blast radius of a seed file: all transitive dependents up to
+ * `depth` hops, walking the inverse-import (dependents) edges.
  */
-function computeBlastRadius(
-  seed: string,
-  nodes: Map<string, GraphNode>,
-  depth: number,
-): Set<string> {
+function blastRadius(graph: GraphData, seed: string, depth: number): Set<string> {
   const reached = new Set<string>();
-  let frontier = new Set<string>([seed]);
+  let frontier: Array<{ file: string; d: number }> = [{ file: seed, d: 0 }];
 
-  for (let hop = 0; hop < depth; hop++) {
-    const next = new Set<string>();
-    for (const key of frontier) {
-      const node = nodes.get(key);
+  while (frontier.length > 0) {
+    const next: Array<{ file: string; d: number }> = [];
+    for (const { file, d } of frontier) {
+      if (d >= depth) continue;
+      const node = graph.nodes[file];
       if (!node) continue;
       for (const dep of node.dependents) {
-        if (dep !== seed && !reached.has(dep)) {
-          reached.add(dep);
-          next.add(dep);
-        }
+        if (reached.has(dep) || !graph.nodes[dep]) continue;
+        reached.add(dep);
+        next.push({ file: dep, d: d + 1 });
       }
     }
-    if (next.size === 0) break;
     frontier = next;
   }
-
   return reached;
 }
 
+/** Does any test file depend on this file (directly)? */
+function hasTestCoverage(graph: GraphData, file: string): boolean {
+  const node = graph.nodes[file];
+  if (!node) return false;
+  return node.dependents.some(isTestFile);
+}
+
+export interface DetectChangesInput {
+  graph: GraphData;
+  changedFiles: string[];
+  base: string;
+  depth?: number;
+  importance?: Record<string, ImportanceEntry>;
+  /** Security + attack issues across the project (filtered to changed files). */
+  securityIssues?: SecurityIssue[];
+}
+
 /**
- * Pure-graph change analysis. Deterministic; no I/O.
+ * Run the risk-scored change analysis. Deterministic and pure — all inputs are
+ * passed in so it is trivially testable.
  */
-export function analyzeChanges(input: AnalyzeChangesInput): ChangeAnalysis {
+export function detectChanges(input: DetectChangesInput): ChangeReviewResult {
+  const { graph, changedFiles, base } = input;
   const depth = input.depth ?? 2;
   const importance = input.importance ?? {};
-  const nodes = new Map<string, GraphNode>(Object.entries(input.graph.nodes));
+  const issues = input.securityIssues ?? [];
 
-  // Normalize changed paths to forward slashes for graph-key matching.
-  const changedFiles = input.changedFiles.map((f) => f.replace(/\\/g, '/'));
-  const analyzedFiles = changedFiles.filter((f) => nodes.has(f));
+  const issuesByFile = new Map<string, number>();
+  for (const issue of issues) {
+    const key = issue.file.replace(/\\/g, '/');
+    issuesByFile.set(key, (issuesByFile.get(key) ?? 0) + 1);
+  }
 
+  const known = changedFiles.filter((f) => graph.nodes[f]);
+  const unknownFiles = changedFiles.filter((f) => !graph.nodes[f]);
+
+  const allAffected = new Set<string>();
   const reviewItems: ReviewItem[] = [];
 
-  for (const file of analyzedFiles) {
-    const node = nodes.get(file)!;
-    const blast = computeBlastRadius(file, nodes, depth);
-    const directDependents = node.dependents.length;
+  for (const file of known) {
+    const radius = blastRadius(graph, file, depth);
+    for (const r of radius) allAffected.add(r);
+
+    const node: GraphNode = graph.nodes[file];
     const imp = importance[file]?.score ?? 0;
+    const testGap = !hasTestCoverage(graph, file);
+    const isolated = node.dependents.length === 0;
+    const securityIssues = issuesByFile.get(file) ?? 0;
 
-    // Test gap: the file itself is not a test, and none of its dependents are tests.
-    const hasTestDependent = node.dependents.some(isTestPath) || isTestPath(file);
-    const testGap = !hasTestDependent;
-
-    // Risk model (0-100, clamped). Blast radius dominates; importance and a
-    // test gap add weight. These weights are tuned to keep typical changes
-    // mid-range and only flag genuinely wide-impact, untested, important files.
-    const reasons: string[] = [];
-    let risk = 0;
-
-    const blastContribution = Math.min(50, blast.size * 5);
-    risk += blastContribution;
-    if (blast.size > 0) reasons.push(`${blast.size} dependent file(s) within ${depth} hops`);
-
-    const importanceContribution = Math.min(30, imp * 2);
-    risk += importanceContribution;
-    if (imp >= 10) reasons.push(`high importance (${imp})`);
-
-    if (testGap) {
-      risk += 20;
-      reasons.push('no test coverage detected');
-    }
-
-    risk = Math.max(0, Math.min(100, Math.round(risk)));
-    if (reasons.length === 0) reasons.push('isolated change, low impact');
+    // Risk = blast radius (capped) + importance contribution + test-gap penalty
+    // + heavy weight on security issues touching the changed file.
+    const risk =
+      Math.min(radius.size, 50) +
+      Math.min(imp, 50) +
+      (testGap ? 10 : 0) +
+      securityIssues * 25;
 
     reviewItems.push({
       file,
-      blastRadius: blast.size,
-      directDependents,
-      importance: imp,
-      testGap,
       risk,
-      reasons,
+      blastRadius: radius.size,
+      importance: imp,
+      isolated,
+      testGap,
+      securityIssues,
     });
   }
 
-  // Rank by risk desc, then blast radius desc, then path for stable order.
-  reviewItems.sort(
-    (a, b) => b.risk - a.risk || b.blastRadius - a.blastRadius || a.file.localeCompare(b.file),
-  );
+  reviewItems.sort((a, b) => b.risk - a.risk);
 
-  const totalBlastRadius = reviewItems.reduce((sum, it) => sum + it.blastRadius, 0);
-  const highRisk = reviewItems.filter((it) => it.risk >= 60).length;
-  const testGaps = reviewItems.filter((it) => it.testGap).length;
+  const affectedFiles = [...allAffected];
+  const totalNodes = Object.keys(graph.nodes).length;
+  const graphContextTokens = (known.length + affectedFiles.length) * TOKENS_PER_GRAPH_NODE;
+  const fullContextTokens = totalNodes * TOKENS_PER_FILE_CONTENT;
+  const savedTokens = Math.max(0, fullContextTokens - graphContextTokens);
+  const savedPercent = fullContextTokens > 0 ? Math.round((savedTokens / fullContextTokens) * 100) : 0;
+
+  const totalSecurityIssues = reviewItems.reduce((sum, r) => sum + r.securityIssues, 0);
 
   return {
-    base: input.base,
+    base,
     changedFiles,
-    analyzedFiles,
+    unknownFiles,
     reviewItems,
+    affectedFiles,
     summary: {
       changed: changedFiles.length,
-      totalBlastRadius,
-      highRisk,
-      testGaps,
+      affected: affectedFiles.length,
+      highRisk: reviewItems.filter((r) => r.risk >= 30).length,
+      testGaps: reviewItems.filter((r) => r.testGap).length,
+      securityIssues: totalSecurityIssues,
+    },
+    contextSavings: {
+      estimated: true,
+      fullContextTokens,
+      graphContextTokens,
+      savedTokens,
+      savedPercent,
     },
   };
 }

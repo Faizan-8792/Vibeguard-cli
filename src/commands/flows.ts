@@ -1,125 +1,99 @@
 import type { CommandContext } from '../context.js';
-import { loadGraph, buildGraph, GRAPH_SCHEMA_VERSION, type GraphData } from '../engines/graph-builder.js';
-import { computeFlows, computeBridges, computeKnowledgeGaps } from '../engines/flow-analyzer.js';
-import { resolveFiles } from '../utils/glob-resolver.js';
+import { VibeguardError, ErrorCodes } from '../utils/errors.js';
 import { emitJson } from '../utils/json-output.js';
-import { header, divider, statusIcon, filePath, brand, summaryLine } from '../utils/ui.js';
+import { header, keyValue, divider, statusIcon, filePath, brand } from '../utils/ui.js';
 
 export interface FlowsCommandOptions {
-  /** View: flows (default), bridges, or gaps. */
+  /** Which analysis to show: flows (default), bridges, gaps, or all. */
   view?: string;
   limit?: number;
 }
 
-async function ensureGraph(ctx: CommandContext): Promise<GraphData> {
-  const existing = await loadGraph(ctx.projectRoot);
-  if (existing) return existing;
-  const files = await resolveFiles(ctx.projectRoot, ctx.config.effectiveInclude, ctx.config.effectiveSkipSet);
-  const result = await buildGraph(ctx.projectRoot, files, ctx.config, ctx.logger);
-  return { schemaVersion: GRAPH_SCHEMA_VERSION, nodes: Object.fromEntries(result.nodes), edges: [] };
-}
-
+/**
+ * Surface execution flows, architectural bridges, and knowledge gaps from the
+ * dependency graph — the "deeper graph intelligence" pillar.
+ */
 export async function runFlows(ctx: CommandContext, opts: FlowsCommandOptions): Promise<void> {
-  const { logger, options } = ctx;
-  const view = opts.view ?? 'flows';
+  const { logger, projectRoot, options } = ctx;
+  const view = (opts.view ?? 'flows').toLowerCase();
+  const limit = opts.limit && opts.limit > 0 ? opts.limit : 20;
+
+  const { loadGraph } = await import('../engines/graph-builder.js');
+  const { detectFlows, detectBridges, detectKnowledgeGaps } = await import('../engines/flow-analyzer.js');
+
+  const graph = await loadGraph(projectRoot);
+  if (!graph) {
+    throw new VibeguardError(ErrorCodes.CONFIG_NOT_FOUND, 'No graph found. Run `vibeguard map` first.');
+  }
 
   if (!options.json) logger.startSpinner('Analyzing execution flows...');
-  const graph = await ensureGraph(ctx);
-
-  if (view === 'bridges') {
-    const bridges = computeBridges(graph, { topN: opts.limit ?? 10 });
-    if (!options.json) logger.stopSpinner(true);
-    if (options.json) return emitJson({ bridges });
-    renderBridges(bridges);
-    return;
-  }
-
-  if (view === 'gaps') {
-    const gaps = computeKnowledgeGaps(graph);
-    if (!options.json) logger.stopSpinner(true);
-    if (options.json) return emitJson({ ...gaps });
-    renderGaps(gaps);
-    return;
-  }
-
-  const flows = computeFlows(graph, { limit: opts.limit ?? 50 });
+  const flows = detectFlows(graph, limit);
+  const bridges = detectBridges(graph, limit);
+  const gaps = detectKnowledgeGaps(graph);
   if (!options.json) logger.stopSpinner(true);
-  if (options.json) return emitJson({ flows });
-  renderFlows(flows);
-}
 
-function flush(lines: string[]): void {
-  process.stdout.write(lines.join('\n') + '\n');
-}
-
-function renderFlows(flows: ReturnType<typeof computeFlows>): void {
-  const out: string[] = [];
-  out.push(header('Execution Flows', '🔀'));
-  out.push('');
-  if (flows.length === 0) {
-    out.push(`  ${statusIcon('info')} ${brand.muted('No multi-step flows detected. Build the graph first with `vibeguard map`.')}`);
-    flush(out);
+  if (options.json) {
+    if (view === 'bridges') emitJson({ bridges });
+    else if (view === 'gaps') emitJson({ gaps });
+    else if (view === 'all') emitJson({ flows, bridges, gaps });
+    else emitJson({ flows });
     return;
   }
-  out.push(`  ${brand.muted(`${flows.length} flows (sorted by criticality):`)}`);
-  out.push('');
-  for (const flow of flows.slice(0, 20)) {
-    const color = flow.criticality >= 60 ? 'danger' : flow.criticality >= 30 ? 'warning' : 'info';
-    out.push(`  ${brand[color].bold(`[${flow.criticality}]`)} ${filePath(flow.entryPoint)} ${brand.muted(`(depth ${flow.depth}, ${flow.nodeCount} files)`)}`);
-  }
-  out.push('');
-  flush(out);
-}
 
-function renderBridges(bridges: ReturnType<typeof computeBridges>): void {
-  const out: string[] = [];
-  out.push(header('Architectural Bridges', '🌉'));
-  out.push('');
-  if (bridges.length === 0) {
-    out.push(`  ${statusIcon('info')} ${brand.muted('No bridge nodes detected.')}`);
-  } else {
-    out.push(`  ${brand.muted('Connector nodes (removal would fragment the graph most):')}`);
-    out.push('');
-    for (const b of bridges) {
-      out.push(`  ${brand.warning.bold(`[${b.score}]`)} ${filePath(b.file)}`);
+  const output: string[] = [];
+
+  if (view === 'flows' || view === 'all') {
+    output.push(header('Execution Flows', '🌊'));
+    output.push('');
+    if (flows.length === 0) {
+      output.push(`  ${statusIcon('info')} ${brand.muted('No entry points detected.')}`);
+    } else {
+      for (const flow of flows.slice(0, limit)) {
+        output.push(`  ${brand.primary.bold(`[${flow.kind}]`)} ${filePath(flow.entry)} ${brand.muted(`crit:${flow.criticality}`)}`);
+        output.push(`     ${brand.muted(`reaches ${flow.members.length} files, depth ${flow.depth}`)}`);
+      }
+    }
+    output.push('');
+  }
+
+  if (view === 'bridges' || view === 'all') {
+    output.push(header('Architectural Bridges', '🌉'));
+    output.push(`  ${brand.muted('(chokepoints — many paths flow through these)')}`);
+    output.push('');
+    if (bridges.length === 0) {
+      output.push(`  ${statusIcon('info')} ${brand.muted('No significant bridges found.')}`);
+    } else {
+      for (const b of bridges.slice(0, limit)) {
+        output.push(`  ${brand.warning.bold(`[${b.score}]`)} ${filePath(b.file)}`);
+      }
+    }
+    output.push('');
+  }
+
+  if (view === 'gaps' || view === 'all') {
+    output.push(header('Knowledge Gaps', '🕳️'));
+    output.push('');
+    output.push(keyValue('Isolated files', brand.info(String(gaps.isolatedFiles.length))));
+    output.push(keyValue('Untested hotspots', gaps.untestedHotspots.length > 0 ? brand.warning(String(gaps.untestedHotspots.length)) : brand.muted('0')));
+    output.push('');
+    if (gaps.untestedHotspots.length > 0) {
+      output.push(`  ${brand.warning.bold('Untested hotspots')} ${brand.muted('(heavily depended on, no test coverage):')}`);
+      for (const h of gaps.untestedHotspots) {
+        output.push(`    ${filePath(h.file)} ${brand.muted(`(${h.dependents} dependents)`)}`);
+      }
+      output.push('');
+    }
+    if (gaps.isolatedFiles.length > 0) {
+      output.push(`  ${brand.muted('Isolated (no imports, no dependents):')}`);
+      for (const f of gaps.isolatedFiles.slice(0, 10)) {
+        output.push(`    ${filePath(f)}`);
+      }
+      output.push('');
     }
   }
-  out.push('');
-  flush(out);
-}
 
-function renderGaps(gaps: ReturnType<typeof computeKnowledgeGaps>): void {
-  const out: string[] = [];
-  out.push(header('Knowledge Gaps', '🧩'));
-  out.push('');
-  out.push(summaryLine([
-    { label: 'Isolated', value: gaps.summary.isolated, color: gaps.summary.isolated > 0 ? 'warning' : 'muted' },
-    { label: 'Untested hotspots', value: gaps.summary.untestedHotspots, color: gaps.summary.untestedHotspots > 0 ? 'danger' : 'muted' },
-  ]));
-  out.push('');
-
-  if (gaps.untestedHotspots.length > 0) {
-    out.push(divider());
-    out.push(`  ${brand.danger.bold('Untested hotspots (high fan-in, no tests):')}`);
-    for (const h of gaps.untestedHotspots.slice(0, 10)) {
-      out.push(`    ${filePath(h.file)} ${brand.muted(`(${h.dependents} dependents)`)}`);
-    }
-    out.push('');
-  }
-
-  if (gaps.isolatedNodes.length > 0) {
-    out.push(divider());
-    out.push(`  ${brand.warning.bold('Isolated nodes (no imports, no dependents):')}`);
-    for (const f of gaps.isolatedNodes.slice(0, 10)) {
-      out.push(`    ${filePath(f)}`);
-    }
-    out.push('');
-  }
-
-  if (gaps.summary.isolated === 0 && gaps.summary.untestedHotspots === 0) {
-    out.push(`  ${statusIcon('success')} ${brand.success('No structural gaps detected.')}`);
-    out.push('');
-  }
-
-  flush(out);
+  output.push(divider());
+  output.push(`  ${brand.muted('Views:')} ${brand.secondary('--view flows|bridges|gaps|all')}`);
+  output.push('');
+  process.stdout.write(output.join('\n') + '\n');
 }

@@ -1,48 +1,29 @@
 import type { CommandContext } from '../context.js';
-import { VibeguardError, ErrorCodes } from '../utils/errors.js';
-import { VIBEGUARD_TOOL_NAMES, type VibeGuardToolName } from '../mcp/server.js';
+import { parseToolAllowlist } from '../mcp/tools.js';
 
 export interface ServeCommandOptions {
   tools?: string;
 }
 
 /**
- * Parse a comma-separated tool allowlist (from --tools or VIBEGUARD_TOOLS),
- * keeping only known tool names. Returns undefined when nothing valid is given,
- * which means "expose all tools".
- */
-export function parseToolAllowlist(raw: string | undefined): VibeGuardToolName[] | undefined {
-  if (!raw || raw.trim().length === 0) return undefined;
-  const known = new Set<string>(VIBEGUARD_TOOL_NAMES);
-  const selected = raw
-    .split(',')
-    .map((t) => t.trim())
-    .filter((t) => t.length > 0 && known.has(t)) as VibeGuardToolName[];
-  return selected.length > 0 ? selected : undefined;
-}
-
-/**
- * Boot the VibeGuard MCP server over stdio.
+ * Start the VibeGuard MCP server on stdio.
  *
- * Note: the MCP protocol owns stdout, so this command never prints to stdout.
- * Status/diagnostics go to stderr to avoid corrupting the protocol stream.
+ * This is a long-running process: it speaks the Model Context Protocol over
+ * stdin/stdout and must NOT write anything else to stdout (that would corrupt
+ * the protocol stream). Status messages therefore go to stderr only.
  */
 export async function runServe(ctx: CommandContext, opts: ServeCommandOptions): Promise<void> {
-  const { projectRoot } = ctx;
+  const { startMcpServer } = await import('../mcp/server.js');
+  const allow = parseToolAllowlist(opts.tools);
 
-  const allowedTools = parseToolAllowlist(opts.tools ?? process.env['VIBEGUARD_TOOLS']);
+  // Diagnostic line on stderr (safe — stdout is reserved for the MCP stream).
+  process.stderr.write(
+    `[vibeguard] MCP server starting (project: ${ctx.projectRoot}${allow ? `, tools: ${allow.join(',')}` : ''})\n`,
+  );
 
-  // Diagnostics to stderr only — stdout is reserved for the MCP transport.
-  const toolList = allowedTools ? allowedTools.join(', ') : 'all';
-  process.stderr.write(`[vibeguard] MCP server starting (tools: ${toolList})\n`);
-
-  try {
-    const { startVibeGuardServer } = await import('../mcp/server.js');
-    await startVibeGuardServer({ projectRoot, allowedTools });
-  } catch (err) {
-    throw new VibeguardError(
-      ErrorCodes.INTERNAL_ERROR,
-      `Failed to start MCP server: ${err instanceof Error ? err.message : 'unknown error'}`,
-    );
-  }
+  await startMcpServer({
+    projectRoot: ctx.projectRoot,
+    allow,
+    version: '0.1.0',
+  });
 }

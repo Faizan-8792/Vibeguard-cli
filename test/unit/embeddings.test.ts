@@ -1,74 +1,66 @@
 import { describe, it, expect } from 'vitest';
-import { embedText, cosineSimilarity, SemanticIndex, hybridSearch } from '../../src/engines/embeddings.js';
+import { embedText, cosineSimilarity, buildEmbeddings, semanticSearch } from '../../src/engines/embeddings.js';
 import type { GraphData } from '../../src/engines/graph-builder.js';
 
-function n(file: string, exports: string[] = []) {
-  return { file, imports: [], exports, dependents: [], edges: [] };
+function makeGraph(): GraphData {
+  return {
+    schemaVersion: '2.2.0',
+    nodes: {
+      'src/auth/login.ts': { file: 'src/auth/login.ts', imports: [], exports: ['authenticateUser', 'login'], dependents: [], edges: [] },
+      'src/payments/stripe.ts': { file: 'src/payments/stripe.ts', imports: [], exports: ['chargeCard', 'refundPayment'], dependents: [], edges: [] },
+      'src/utils/logger.ts': { file: 'src/utils/logger.ts', imports: [], exports: ['createLogger'], dependents: [], edges: [] },
+    },
+  } as unknown as GraphData;
 }
 
-const graph: GraphData = {
-  schemaVersion: '2.1.0',
-  nodes: {
-    'src/auth/authentication-service.ts': n('src/auth/authentication-service.ts', ['authenticate', 'login', 'logout']),
-    'src/users/user-repository.ts': n('src/users/user-repository.ts', ['findUser', 'createUser']),
-    'src/payments/stripe-gateway.ts': n('src/payments/stripe-gateway.ts', ['charge', 'refund']),
-  },
-};
-
-describe('embedText / cosineSimilarity', () => {
-  it('produces deterministic vectors', () => {
-    const a = embedText('authenticate login user');
-    const b = embedText('authenticate login user');
-    expect(Array.from(a)).toEqual(Array.from(b));
+describe('embedText', () => {
+  it('produces a unit-normalized fixed-dimension vector', () => {
+    const v = embedText('authenticate user login', 128);
+    expect(v.length).toBe(128);
+    const mag = Math.sqrt(v.reduce((s, x) => s + x * x, 0));
+    expect(mag).toBeCloseTo(1, 5);
   });
 
-  it('returns a zero vector for empty input', () => {
+  it('is deterministic for the same input', () => {
+    expect(embedText('hello world')).toEqual(embedText('hello world'));
+  });
+
+  it('returns an all-zero vector for empty/symbol-only text', () => {
     const v = embedText('');
     expect(v.every((x) => x === 0)).toBe(true);
   });
+});
 
-  it('a vector is identical to itself (similarity ~1)', () => {
-    const v = embedText('payment stripe charge');
-    expect(cosineSimilarity(v, v)).toBeCloseTo(1, 5);
+describe('cosineSimilarity', () => {
+  it('is 1 for identical vectors and higher for related text', () => {
+    const a = embedText('authenticate user login session');
+    expect(cosineSimilarity(a, a)).toBeCloseTo(1, 5);
+
+    const related = embedText('user authentication login');
+    const unrelated = embedText('stripe payment charge card refund');
+    expect(cosineSimilarity(a, related)).toBeGreaterThan(cosineSimilarity(a, unrelated));
   });
 
-  it('related text scores higher than unrelated text', () => {
-    const query = embedText('user login authentication');
-    const related = embedText('authenticate login logout');
-    const unrelated = embedText('stripe charge refund payment');
-    expect(cosineSimilarity(query, related)).toBeGreaterThan(cosineSimilarity(query, unrelated));
+  it('returns 0 for mismatched lengths', () => {
+    expect(cosineSimilarity([1, 0], [1, 0, 0])).toBe(0);
   });
 });
 
-describe('SemanticIndex', () => {
+describe('buildEmbeddings / semanticSearch', () => {
   it('embeds every node', () => {
-    const idx = new SemanticIndex(graph);
-    expect(idx.size).toBe(3);
+    const data = buildEmbeddings(makeGraph());
+    expect(data.entries.length).toBe(3);
+    expect(data.provider).toBe('local-hash');
   });
 
-  it('ranks the most semantically relevant node first', () => {
-    const idx = new SemanticIndex(graph);
-    const hits = idx.search('authenticate login');
-    expect(hits.length).toBeGreaterThan(0);
-    expect(hits[0].file).toBe('src/auth/authentication-service.ts');
-  });
-});
-
-describe('hybridSearch', () => {
-  it('combines keyword and semantic signals', () => {
-    const hits = hybridSearch(graph, 'authenticate');
-    expect(hits.length).toBeGreaterThan(0);
-    expect(hits[0].file).toBe('src/auth/authentication-service.ts');
-    expect(hits[0].score).toBeGreaterThan(0);
+  it('ranks the most lexically-related node first', () => {
+    const data = buildEmbeddings(makeGraph());
+    const hits = semanticSearch(data, 'authenticate user login');
+    expect(hits[0].file).toBe('src/auth/login.ts');
   });
 
-  it('finds payment files for a payment query', () => {
-    const hits = hybridSearch(graph, 'charge payment');
-    expect(hits.some((h) => h.file === 'src/payments/stripe-gateway.ts')).toBe(true);
-  });
-
-  it('honors the result limit', () => {
-    const hits = hybridSearch(graph, 'user', { limit: 1 });
-    expect(hits.length).toBeLessThanOrEqual(1);
+  it('respects the limit', () => {
+    const data = buildEmbeddings(makeGraph());
+    expect(semanticSearch(data, 'src', 1).length).toBeLessThanOrEqual(1);
   });
 });

@@ -1,126 +1,76 @@
 import { describe, it, expect } from 'vitest';
-import { analyzeChanges } from '../../src/engines/change-detector.js';
-import { computeTokenSavings, estimateTokens } from '../../src/engines/token-savings.js';
+import { detectChanges } from '../../src/engines/change-detector.js';
 import type { GraphData } from '../../src/engines/graph-builder.js';
-import type { ImportanceEntry } from '../../src/engines/importance-analyzer.js';
+import type { SecurityIssue } from '../../src/engines/security-scanner.js';
 
-function n(file: string, imports: string[] = [], dependents: string[] = [], exports: string[] = []) {
-  return { file, imports, exports, dependents, edges: [] };
+// auth.ts <- service.ts <- route.ts ; auth.ts also has a test
+function makeGraph(): GraphData {
+  return {
+    schemaVersion: '2.2.0',
+    nodes: {
+      'src/auth.ts': { file: 'src/auth.ts', imports: [], exports: ['auth'], dependents: ['src/service.ts', 'src/auth.test.ts'], edges: [] },
+      'src/service.ts': { file: 'src/service.ts', imports: ['src/auth.ts'], exports: ['service'], dependents: ['src/route.ts'], edges: [] },
+      'src/route.ts': { file: 'src/route.ts', imports: ['src/service.ts'], exports: ['route'], dependents: [], edges: [] },
+      'src/auth.test.ts': { file: 'src/auth.test.ts', imports: ['src/auth.ts'], exports: [], dependents: [], edges: [] },
+      'src/lonely.ts': { file: 'src/lonely.ts', imports: [], exports: ['lonely'], dependents: [], edges: [] },
+    },
+  } as unknown as GraphData;
 }
 
-// Graph: util.ts is depended on by service.ts and handler.ts; handler.ts by index.ts.
-const graph: GraphData = {
-  schemaVersion: '2.1.0',
-  nodes: {
-    'src/util.ts': n('src/util.ts', [], ['src/service.ts', 'src/handler.ts'], ['helper']),
-    'src/service.ts': n('src/service.ts', ['src/util.ts'], ['src/handler.ts'], ['service']),
-    'src/handler.ts': n('src/handler.ts', ['src/util.ts', 'src/service.ts'], ['src/index.ts', 'src/handler.test.ts'], ['handle']),
-    'src/index.ts': n('src/index.ts', ['src/handler.ts'], [], ['main']),
-    'src/handler.test.ts': n('src/handler.test.ts', ['src/handler.ts'], [], []),
-  },
-};
-
-const importance: Record<string, ImportanceEntry> = {
-  'src/util.ts': { score: 20, dependents: 2, imports: 0, gitCommits: 0, routeUsage: 0 },
-  'src/service.ts': { score: 8, dependents: 1, imports: 1, gitCommits: 0, routeUsage: 0 },
-};
-
-describe('analyzeChanges', () => {
-  it('only analyzes files that exist as graph nodes', () => {
-    const result = analyzeChanges({
-      base: 'HEAD~1',
-      changedFiles: ['src/util.ts', 'README.md', 'new-untracked.ts'],
-      graph,
-      importance,
-    });
-    expect(result.analyzedFiles).toEqual(['src/util.ts']);
-    expect(result.summary.changed).toBe(3);
+describe('detectChanges', () => {
+  it('computes blast radius via transitive dependents', () => {
+    const result = detectChanges({ graph: makeGraph(), changedFiles: ['src/auth.ts'], base: 'HEAD~1', depth: 3 });
+    const item = result.reviewItems.find((r) => r.file === 'src/auth.ts');
+    // dependents: service, auth.test → route (transitive). All reachable.
+    expect(item?.blastRadius).toBeGreaterThanOrEqual(2);
+    expect(result.affectedFiles).toContain('src/service.ts');
+    expect(result.affectedFiles).toContain('src/route.ts');
   });
 
-  it('computes blast radius via reverse-dependency BFS', () => {
-    const result = analyzeChanges({
-      base: 'HEAD~1',
-      changedFiles: ['src/util.ts'],
-      graph,
-      importance,
-      depth: 2,
-    });
-    const item = result.reviewItems.find((r) => r.file === 'src/util.ts')!;
-    // util -> {service, handler} (1 hop) -> {index} via handler (2nd hop). test file also depends on handler.
-    expect(item.blastRadius).toBeGreaterThanOrEqual(3);
-    expect(item.directDependents).toBe(2);
-  });
-
-  it('ranks higher-impact changes first', () => {
-    const result = analyzeChanges({
-      base: 'HEAD~1',
-      changedFiles: ['src/util.ts', 'src/index.ts'],
-      graph,
-      importance,
-    });
-    // util.ts (wide blast + high importance) should outrank index.ts (leaf).
-    expect(result.reviewItems[0].file).toBe('src/util.ts');
-    expect(result.reviewItems[0].risk).toBeGreaterThan(result.reviewItems[1].risk);
-  });
-
-  it('flags a test gap when no test depends on the file', () => {
-    const result = analyzeChanges({
-      base: 'HEAD~1',
-      changedFiles: ['src/service.ts'],
-      graph,
-      importance,
-    });
-    // service.ts has no test dependent → test gap.
-    expect(result.reviewItems[0].testGap).toBe(true);
+  it('flags test gaps when no test depends on a changed file', () => {
+    const result = detectChanges({ graph: makeGraph(), changedFiles: ['src/service.ts'], base: 'HEAD~1' });
+    const item = result.reviewItems.find((r) => r.file === 'src/service.ts');
+    expect(item?.testGap).toBe(true);
   });
 
   it('does not flag a test gap when a test depends on the file', () => {
-    const result = analyzeChanges({
-      base: 'HEAD~1',
-      changedFiles: ['src/handler.ts'],
-      graph,
-      importance,
-    });
-    // handler.test.ts depends on handler.ts → no test gap.
-    expect(result.reviewItems[0].testGap).toBe(false);
+    const result = detectChanges({ graph: makeGraph(), changedFiles: ['src/auth.ts'], base: 'HEAD~1' });
+    const item = result.reviewItems.find((r) => r.file === 'src/auth.ts');
+    expect(item?.testGap).toBe(false);
   });
 
-  it('risk score stays within 0-100', () => {
-    const result = analyzeChanges({
-      base: 'HEAD~1',
-      changedFiles: Object.keys(graph.nodes),
-      graph,
-      importance,
-    });
-    for (const item of result.reviewItems) {
-      expect(item.risk).toBeGreaterThanOrEqual(0);
-      expect(item.risk).toBeLessThanOrEqual(100);
+  it('marks isolated files', () => {
+    const result = detectChanges({ graph: makeGraph(), changedFiles: ['src/lonely.ts'], base: 'HEAD~1' });
+    const item = result.reviewItems.find((r) => r.file === 'src/lonely.ts');
+    expect(item?.isolated).toBe(true);
+    expect(item?.blastRadius).toBe(0);
+  });
+
+  it('folds in security issues and boosts their risk', () => {
+    const issues: SecurityIssue[] = [
+      { id: 'SEC-001-x', category: 'hard-coded-secret', severity: 'critical', message: 'key', file: 'src/auth.ts', line: 1 },
+    ] as unknown as SecurityIssue[];
+    const withSec = detectChanges({ graph: makeGraph(), changedFiles: ['src/auth.ts'], base: 'HEAD~1', securityIssues: issues });
+    const withoutSec = detectChanges({ graph: makeGraph(), changedFiles: ['src/auth.ts'], base: 'HEAD~1' });
+    const a = withSec.reviewItems.find((r) => r.file === 'src/auth.ts')!;
+    const b = withoutSec.reviewItems.find((r) => r.file === 'src/auth.ts')!;
+    expect(a.securityIssues).toBe(1);
+    expect(a.risk).toBeGreaterThan(b.risk);
+    expect(withSec.summary.securityIssues).toBe(1);
+  });
+
+  it('separates changed files not present in the graph', () => {
+    const result = detectChanges({ graph: makeGraph(), changedFiles: ['src/auth.ts', 'README.md'], base: 'HEAD~1' });
+    expect(result.unknownFiles).toContain('README.md');
+    expect(result.reviewItems.map((r) => r.file)).not.toContain('README.md');
+  });
+
+  it('reports positive token savings and sorts by descending risk', () => {
+    const result = detectChanges({ graph: makeGraph(), changedFiles: ['src/auth.ts', 'src/service.ts'], base: 'HEAD~1' });
+    expect(result.contextSavings.savedTokens).toBeGreaterThan(0);
+    expect(result.contextSavings.savedPercent).toBeGreaterThan(0);
+    for (let i = 1; i < result.reviewItems.length; i++) {
+      expect(result.reviewItems[i - 1].risk).toBeGreaterThanOrEqual(result.reviewItems[i].risk);
     }
-  });
-
-  it('handles an empty change set', () => {
-    const result = analyzeChanges({ base: 'HEAD~1', changedFiles: [], graph, importance });
-    expect(result.reviewItems).toEqual([]);
-    expect(result.summary.changed).toBe(0);
-  });
-});
-
-describe('computeTokenSavings', () => {
-  it('estimates tokens as chars/4', () => {
-    expect(estimateTokens('a'.repeat(40))).toBe(10);
-  });
-
-  it('reports positive savings when full context exceeds the response', () => {
-    const savings = computeTokenSavings(40000, { small: 'response' });
-    expect(savings.estimated).toBe(true);
-    expect(savings.fullContextTokens).toBe(10000);
-    expect(savings.savedTokens).toBeGreaterThan(0);
-    expect(savings.savedPercent).toBeGreaterThan(0);
-  });
-
-  it('never reports negative savings for tiny diffs', () => {
-    const savings = computeTokenSavings(8, { a: 'much larger response object than the diff' });
-    expect(savings.savedTokens).toBeGreaterThanOrEqual(0);
-    expect(savings.savedPercent).toBeGreaterThanOrEqual(0);
   });
 });

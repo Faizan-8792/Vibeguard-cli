@@ -1,156 +1,110 @@
 /**
- * Embeddings — local-first semantic search over graph nodes.
+ * Embeddings — optional local-first vector layer for semantic search.
  *
- * The default provider is a deterministic, dependency-free "hashing embedding":
- * each node's signature text (path + export names) is tokenized and hashed into
- * a fixed-dimension vector. This gives meaningful local semantic similarity with
- * zero network calls and zero native dependencies — consistent with VibeGuard's
- * local-first, zero-token guarantees.
- *
- * The design leaves room for optional cloud providers later (OpenAI-compatible,
- * Gemini) behind an explicit opt-in, but none are wired by default.
+ * The default provider is a dependency-free, deterministic "hashing embedding":
+ * it projects tokenized node text into a fixed-dimension vector via feature
+ * hashing. This is NOT a neural embedding — it captures lexical/token overlap,
+ * not deep semantics — but it runs with zero network calls, zero native builds,
+ * and zero extra dependencies, which is exactly VibeGuard's contract. It lets
+ * `search` rank by cosine similarity and gives a clean seam to plug a real
+ * provider (OpenAI-compatible / local sentence-transformers) behind an explicit
+ * opt-in later, without changing callers.
  */
+import type { GraphData } from './graph-builder.js';
+import { tokenize } from './search-index.js';
+import { FileStoreImpl } from '../storage/file-store.js';
 
-import type { GraphData, GraphNode } from './graph-builder.js';
-import { tokenize, GraphIndex } from './graph-index.js';
-
+export const EMBEDDINGS_SCHEMA_VERSION = '1.0.0';
+const EMBEDDINGS_FILE = 'embeddings.json';
 const DIMENSION = 128;
 
-export interface SemanticHit {
+export interface EmbeddingEntry {
   file: string;
-  /** Cosine similarity in [0, 1]. */
-  similarity: number;
+  vector: number[];
 }
 
-export interface HybridHit {
-  file: string;
-  /** Combined score: keyword FTS score normalized + semantic similarity. */
-  score: number;
-  ftsScore: number;
-  similarity: number;
+export interface EmbeddingsData {
+  schemaVersion: string;
+  provider: string;
+  dimension: number;
+  entries: EmbeddingEntry[];
 }
 
-/** Stable 32-bit string hash (FNV-1a). Deterministic across runs/machines. */
-function hash32(str: string): number {
+/** Deterministic 32-bit string hash (FNV-1a). */
+function hash32(s: string): number {
   let h = 0x811c9dc5;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
     h = Math.imul(h, 0x01000193);
   }
   return h >>> 0;
 }
 
 /**
- * Embed a piece of text into a fixed-dimension L2-normalized vector using the
- * hashing trick: each token contributes to a hashed dimension (with a signed
- * secondary hash to reduce collisions). Identifier sub-words are weighted so
- * that `getUserName` and `username` land near each other.
+ * Feature-hash a list of tokens into a unit-normalized DIMENSION-vector.
+ * Each token increments one bucket (sign from a second hash) — the standard
+ * hashing-trick. Unit-normalized so cosine similarity is a plain dot product.
  */
-export function embedText(text: string): Float64Array {
-  const vec = new Float64Array(DIMENSION);
+export function embedText(text: string, dimension = DIMENSION): number[] {
+  const vec = new Array<number>(dimension).fill(0);
   const tokens = tokenize(text);
-  if (tokens.length === 0) return vec;
-
-  for (const token of tokens) {
-    const idx = hash32(token) % DIMENSION;
-    const sign = (hash32('s:' + token) & 1) === 0 ? 1 : -1;
-    vec[idx] += sign;
+  for (const tok of tokens) {
+    const h = hash32(tok);
+    const bucket = h % dimension;
+    const sign = (hash32(tok + '#sign') & 1) === 0 ? 1 : -1;
+    vec[bucket] += sign;
   }
-
-  // L2 normalize so cosine similarity reduces to a dot product.
-  let norm = 0;
-  for (let i = 0; i < DIMENSION; i++) norm += vec[i] * vec[i];
-  norm = Math.sqrt(norm);
-  if (norm > 0) {
-    for (let i = 0; i < DIMENSION; i++) vec[i] /= norm;
+  // Unit-normalize
+  let mag = 0;
+  for (const v of vec) mag += v * v;
+  mag = Math.sqrt(mag);
+  if (mag > 0) {
+    for (let i = 0; i < dimension; i++) vec[i] /= mag;
   }
   return vec;
 }
 
-/** Cosine similarity of two L2-normalized vectors (dot product), clamped to [0,1]. */
-export function cosineSimilarity(a: Float64Array, b: Float64Array): number {
+/** Cosine similarity of two equal-length unit vectors (== dot product). */
+export function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length !== b.length) return 0;
   let dot = 0;
   for (let i = 0; i < a.length; i++) dot += a[i] * b[i];
-  // Hashing trick can produce small negatives; clamp to [0,1] for a clean score.
-  return Math.max(0, Math.min(1, dot));
+  return dot;
 }
 
-/** Build the signature text a node is embedded/searched on. */
-function nodeText(node: GraphNode): string {
-  const base = node.file.split('/').pop() ?? node.file;
-  return [node.file, base, ...node.exports].join(' ');
+/** Build embeddings for every graph node from its file path + exported symbols. */
+export function buildEmbeddings(graph: GraphData, dimension = DIMENSION): EmbeddingsData {
+  const entries: EmbeddingEntry[] = [];
+  for (const node of Object.values(graph.nodes)) {
+    const text = `${node.file} ${node.exports.join(' ')}`;
+    entries.push({ file: node.file, vector: embedText(text, dimension) });
+  }
+  return { schemaVersion: EMBEDDINGS_SCHEMA_VERSION, provider: 'local-hash', dimension, entries };
 }
 
-/**
- * An in-memory semantic index: one embedding per graph node. Built once,
- * queried many times. Deterministic and local.
- */
-export class SemanticIndex {
-  private readonly vectors: Map<string, Float64Array>;
-
-  constructor(graph: GraphData) {
-    this.vectors = new Map();
-    for (const [key, node] of Object.entries(graph.nodes)) {
-      this.vectors.set(key, embedText(nodeText(node)));
-    }
-  }
-
-  get size(): number {
-    return this.vectors.size;
-  }
-
-  /** Pure semantic search: rank nodes by cosine similarity to the query. */
-  search(query: string, opts: { limit?: number } = {}): SemanticHit[] {
-    const qVec = embedText(query);
-    const hits: SemanticHit[] = [];
-    for (const [file, vec] of this.vectors) {
-      const similarity = Math.round(cosineSimilarity(qVec, vec) * 1000) / 1000;
-      if (similarity > 0) hits.push({ file, similarity });
-    }
-    hits.sort((a, b) => b.similarity - a.similarity || a.file.localeCompare(b.file));
-    return hits.slice(0, opts.limit ?? 20);
-  }
+export interface SemanticHit {
+  file: string;
+  similarity: number;
 }
 
-/**
- * Hybrid search: combine keyword FTS (exact/prefix term matches) with semantic
- * similarity. FTS scores are normalized to [0,1] by the top hit, then blended
- * with similarity (weighted toward keyword precision, with semantic as a
- * recall booster). Deterministic and local.
- */
-export function hybridSearch(
-  graph: GraphData,
-  query: string,
-  opts: { limit?: number; ftsWeight?: number } = {},
-): HybridHit[] {
-  const limit = opts.limit ?? 20;
-  const ftsWeight = opts.ftsWeight ?? 0.6;
-  const semanticWeight = 1 - ftsWeight;
+/** Rank nodes by cosine similarity of the query embedding against each node. */
+export function semanticSearch(data: EmbeddingsData, query: string, limit = 20): SemanticHit[] {
+  const queryVec = embedText(query, data.dimension);
+  return data.entries
+    .map((e) => ({ file: e.file, similarity: cosineSimilarity(queryVec, e.vector) }))
+    .filter((h) => h.similarity > 0)
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, limit);
+}
 
-  const index = new GraphIndex(graph);
-  const semantic = new SemanticIndex(graph);
+export async function saveEmbeddings(projectRoot: string, data: EmbeddingsData): Promise<void> {
+  const store = new FileStoreImpl(projectRoot);
+  await store.write(EMBEDDINGS_FILE, data);
+}
 
-  const ftsHits = index.search(query, { limit: 200 });
-  const maxFts = ftsHits.length > 0 ? Math.max(...ftsHits.map((h) => h.score)) : 0;
-  const ftsByFile = new Map(ftsHits.map((h) => [h.file, h.score]));
-
-  const semHits = semantic.search(query, { limit: 200 });
-  const simByFile = new Map(semHits.map((h) => [h.file, h.similarity]));
-
-  // Union of candidate files from both retrievers.
-  const candidates = new Set<string>([...ftsByFile.keys(), ...simByFile.keys()]);
-
-  const results: HybridHit[] = [];
-  for (const file of candidates) {
-    const rawFts = ftsByFile.get(file) ?? 0;
-    const normFts = maxFts > 0 ? rawFts / maxFts : 0;
-    const similarity = simByFile.get(file) ?? 0;
-    const score = Math.round((normFts * ftsWeight + similarity * semanticWeight) * 1000) / 1000;
-    if (score > 0) {
-      results.push({ file, score, ftsScore: rawFts, similarity });
-    }
-  }
-
-  results.sort((a, b) => b.score - a.score || a.file.localeCompare(b.file));
-  return results.slice(0, limit);
+export async function loadEmbeddings(projectRoot: string): Promise<EmbeddingsData | null> {
+  const store = new FileStoreImpl(projectRoot);
+  const data = await store.read<EmbeddingsData>(EMBEDDINGS_FILE);
+  if (!data || data.schemaVersion !== EMBEDDINGS_SCHEMA_VERSION) return null;
+  return data;
 }
