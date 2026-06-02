@@ -1,4 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# VibeGuard runtime data (regenerated per project)
+.vibeguard/graph.json
+.vibeguard/analysis-meta.json
+.vibeguard/context-package.json
+.vibeguard/context-package.md
+.vibeguard/cleanup-plan.json
+.vibeguard/tags.json
+.vibeguard/importance.json
+.vibeguard/credentials.json
+
+# Trash (soft-deleted files)
+.vibeguard-trash/
+
+# Environment & secrets
 .env
 .env.local
-.vibeguard/
-.vibeguard-trash/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Package archives
+*.tgz
+
+# IDE
+.idea/
+*.swp
+*.swo
