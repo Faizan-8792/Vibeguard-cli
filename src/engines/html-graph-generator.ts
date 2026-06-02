@@ -3,8 +3,18 @@ import { join } from 'node:path';
 import type { GraphData, GraphNode } from './graph-builder.js';
 
 /**
- * Generates an interactive HTML graph visualization using vis.js (CDN).
- * The output is a self-contained HTML file that can be opened in any browser.
+ * Generates an interactive 3D dependency-graph visualization using
+ * `3d-force-graph` (Three.js / WebGL, loaded from CDN). The output is a
+ * self-contained HTML file that opens in any browser.
+ *
+ * Interaction model (no continuous auto-rotation / drift):
+ *  - Hold and drag        → orbit/rotate the graph in 3D
+ *  - Scroll wheel         → zoom in / out
+ *  - Hover a node         → tooltip with imports / dependents / exports
+ *  - Search / Reset View  → focus a node / fit the whole graph
+ *
+ * The force simulation runs briefly to lay the graph out, then freezes, so the
+ * scene only moves when the user interacts with it.
  */
 export async function generateHTMLGraph(
   projectRoot: string,
@@ -14,8 +24,7 @@ export async function generateHTMLGraph(
   const nodes = Object.values(graphData.nodes);
   const filePath = outputPath ?? join(projectRoot, '.vibeguard', 'graph.html');
 
-  // Build vis.js data
-  const visNodes = nodes.map((node, i) => ({
+  const graphNodes = nodes.map((node) => ({
     id: node.file,
     label: shortenLabel(node.file),
     title: buildTooltip(node),
@@ -23,23 +32,22 @@ export async function generateHTMLGraph(
     value: node.dependents.length + node.imports.length + 1,
   }));
 
-  const visEdges: Array<{ from: string; to: string }> = [];
+  const links: Array<{ source: string; target: string }> = [];
   const seenEdges = new Set<string>();
   for (const node of nodes) {
     for (const imp of node.imports) {
-      // Resolve .js → .ts for display
       const resolved = resolveTarget(imp, graphData);
       if (resolved && resolved !== node.file) {
         const key = `${node.file}→${resolved}`;
         if (!seenEdges.has(key)) {
           seenEdges.add(key);
-          visEdges.push({ from: node.file, to: resolved });
+          links.push({ source: node.file, target: resolved });
         }
       }
     }
   }
 
-  const html = buildHTML(visNodes, visEdges, nodes.length, visEdges.length);
+  const html = buildHTML(graphNodes, links, nodes.length, links.length);
   await writeFile(filePath, html, 'utf-8');
   return filePath;
 }
@@ -62,6 +70,7 @@ function getGroup(file: string): string {
   if (file.includes('/engines/')) return 'engines';
   if (file.includes('/storage/')) return 'storage';
   if (file.includes('/utils/')) return 'utils';
+  if (file.includes('/mcp/')) return 'mcp';
   if (file.includes('test/') || file.includes('.test.')) return 'tests';
   return 'core';
 }
@@ -77,7 +86,7 @@ function resolveTarget(imp: string, graphData: GraphData): string | null {
 
 function buildHTML(
   nodes: Array<{ id: string; label: string; title: string; group: string; value: number }>,
-  edges: Array<{ from: string; to: string }>,
+  links: Array<{ source: string; target: string }>,
   nodeCount: number,
   edgeCount: number,
 ): string {
@@ -86,201 +95,182 @@ function buildHTML(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VibeGuard — Dependency Graph</title>
-  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <title>VibeGuard — 3D Dependency Graph</title>
+  <script src="https://unpkg.com/three-spritetext"></script>
+  <script src="https://unpkg.com/3d-force-graph"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
     body {
       font-family: 'JetBrains Mono', 'Fira Code', monospace;
       background: #0f0f23;
       color: #e0e0e0;
-      height: 100vh;
-      overflow: hidden;
     }
     #header {
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-      padding: 16px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid #7c3aed33;
+      position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+      background: linear-gradient(135deg, rgba(26,26,46,0.95) 0%, rgba(22,33,62,0.95) 100%);
+      padding: 14px 22px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid #7c3aed33; backdrop-filter: blur(8px);
     }
-    #header h1 {
-      font-size: 18px;
-      color: #7c3aed;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    #header .stats {
-      font-size: 13px;
-      color: #6b7280;
-    }
-    #header .stats span {
-      color: #06b6d4;
-      font-weight: bold;
-    }
+    #header h1 { font-size: 17px; color: #7c3aed; display: flex; align-items: center; gap: 8px; }
+    #header .stats { font-size: 12px; color: #6b7280; }
+    #header .stats span { color: #06b6d4; font-weight: bold; }
     #controls {
-      padding: 12px 24px;
-      background: #1a1a2e;
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      border-bottom: 1px solid #ffffff11;
+      position: absolute; top: 64px; left: 22px; z-index: 10;
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
     }
     #controls input {
-      background: #0f0f23;
-      border: 1px solid #333;
-      border-radius: 6px;
-      padding: 8px 14px;
-      color: #e0e0e0;
-      font-size: 13px;
-      width: 300px;
-      outline: none;
+      background: rgba(15,15,35,0.9); border: 1px solid #333; border-radius: 6px;
+      padding: 7px 12px; color: #e0e0e0; font-size: 12px; width: 240px; outline: none;
     }
     #controls input:focus { border-color: #7c3aed; }
     #controls button {
-      background: #7c3aed;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 8px 16px;
-      cursor: pointer;
-      font-size: 13px;
+      background: rgba(124,58,237,0.9); color: #fff; border: none; border-radius: 6px;
+      padding: 7px 14px; cursor: pointer; font-size: 12px;
     }
     #controls button:hover { background: #6d28d9; }
     .legend {
-      display: flex;
-      gap: 16px;
-      margin-left: auto;
-      font-size: 12px;
+      position: absolute; bottom: 16px; left: 22px; z-index: 10;
+      display: flex; gap: 14px; font-size: 11px; flex-wrap: wrap;
+      background: rgba(15,15,35,0.7); padding: 8px 14px; border-radius: 8px;
+      backdrop-filter: blur(8px);
     }
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+    #hint {
+      position: absolute; bottom: 16px; right: 22px; z-index: 10;
+      font-size: 11px; color: #6b7280;
+      background: rgba(15,15,35,0.7); padding: 8px 14px; border-radius: 8px;
+      backdrop-filter: blur(8px);
     }
-    .legend-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-    }
-    #graph { width: 100%; height: calc(100vh - 110px); }
-    #tooltip {
-      position: absolute;
-      background: #1a1a2e;
-      border: 1px solid #7c3aed;
-      border-radius: 8px;
-      padding: 12px;
-      font-size: 12px;
-      line-height: 1.5;
-      display: none;
-      z-index: 100;
-      max-width: 300px;
-      box-shadow: 0 4px 20px rgba(124, 58, 237, 0.3);
-    }
+    #graph { width: 100%; height: 100%; }
+    .empty { display: flex; align-items: center; justify-content: center; height: 100%; color: #6b7280; }
   </style>
 </head>
 <body>
   <div id="header">
-    <h1>🛡️ VibeGuard — Dependency Graph</h1>
+    <h1>🛡️ VibeGuard — 3D Dependency Graph</h1>
     <div class="stats">
-      <span>${nodeCount}</span> nodes &nbsp;•&nbsp; <span>${edgeCount}</span> edges &nbsp;•&nbsp; Generated ${new Date().toLocaleDateString()}
+      <span>${nodeCount}</span> nodes &nbsp;•&nbsp; <span>${edgeCount}</span> edges &nbsp;•&nbsp; ${new Date().toLocaleDateString()}
     </div>
   </div>
   <div id="controls">
-    <input type="text" id="search" placeholder="🔍 Search files..." />
-    <button onclick="resetView()">Reset View</button>
-    <button onclick="togglePhysics()">Toggle Physics</button>
-    <div class="legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div>Core</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>Commands</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Engines</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Storage</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#6b7280"></div>Utils</div>
-    </div>
+    <input type="text" id="search" placeholder="🔍 Search files..." autocomplete="off" />
+    <button id="btn-reset">Reset View</button>
+    <button id="btn-labels">Toggle Labels</button>
+    <button id="btn-spin">Auto-Rotate: Off</button>
   </div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div>Core</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>Commands</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Engines</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Storage</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ec4899"></div>MCP</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#6b7280"></div>Utils</div>
+  </div>
+  <div id="hint">Drag to rotate • Scroll to zoom • Hover for details</div>
   <div id="graph"></div>
-  <div id="tooltip"></div>
 
   <script>
-    const nodesData = ${JSON.stringify(nodes)};
-    const edgesData = ${JSON.stringify(edges)};
-
-    const groupColors = {
-      core: { background: '#7c3aed', border: '#6d28d9', highlight: { background: '#9333ea', border: '#7c3aed' } },
-      commands: { background: '#06b6d4', border: '#0891b2', highlight: { background: '#22d3ee', border: '#06b6d4' } },
-      engines: { background: '#10b981', border: '#059669', highlight: { background: '#34d399', border: '#10b981' } },
-      storage: { background: '#f59e0b', border: '#d97706', highlight: { background: '#fbbf24', border: '#f59e0b' } },
-      utils: { background: '#6b7280', border: '#4b5563', highlight: { background: '#9ca3af', border: '#6b7280' } },
-      tests: { background: '#374151', border: '#1f2937', highlight: { background: '#4b5563', border: '#374151' } },
+    const graphData = {
+      nodes: ${JSON.stringify(nodes)},
+      links: ${JSON.stringify(links)},
     };
 
-    const nodes = new vis.DataSet(nodesData.map(n => ({
-      ...n,
-      color: groupColors[n.group] || groupColors.core,
-      font: { color: '#e0e0e0', size: 12 },
-      shape: 'dot',
-      scaling: { min: 8, max: 30 },
-    })));
+    const groupColors = {
+      core: '#7c3aed', commands: '#06b6d4', engines: '#10b981',
+      storage: '#f59e0b', mcp: '#ec4899', utils: '#6b7280', tests: '#374151',
+    };
 
-    const edges = new vis.DataSet(edgesData.map(e => ({
-      ...e,
-      arrows: 'to',
-      color: { color: '#ffffff22', highlight: '#7c3aed' },
-      smooth: { type: 'cubicBezier', roundness: 0.4 },
-    })));
+    const el = document.getElementById('graph');
 
-    const container = document.getElementById('graph');
-    const network = new vis.Network(container, { nodes, edges }, {
-      physics: {
-        solver: 'forceAtlas2Based',
-        forceAtlas2Based: { gravitationalConstant: -80, springLength: 120 },
-        stabilization: { iterations: 200 },
-      },
-      interaction: { hover: true, tooltipDelay: 200, zoomView: true },
-      layout: { improvedLayout: true },
-    });
+    if (!graphData.nodes.length || typeof ForceGraph3D === 'undefined') {
+      el.innerHTML = '<div class="empty">' +
+        (graphData.nodes.length ? 'Could not load 3D renderer (offline?).' : 'No graph data. Run: vibeguard map') +
+        '</div>';
+    } else {
+      let showLabels = true;
 
-    let physicsEnabled = true;
+      const Graph = ForceGraph3D()(el)
+        .backgroundColor('#0f0f23')
+        .graphData(graphData)
+        .nodeId('id')
+        .nodeVal(n => Math.max(1, n.value))
+        .nodeColor(n => groupColors[n.group] || groupColors.core)
+        .nodeOpacity(0.95)
+        .nodeResolution(12)
+        .nodeLabel(n => '<div style="font-family:monospace;font-size:12px;background:#1a1a2e;border:1px solid #7c3aed;border-radius:6px;padding:8px 10px;color:#e0e0e0">' + n.title + '</div>')
+        .linkColor(() => 'rgba(255,255,255,0.18)')
+        .linkWidth(0.5)
+        .linkDirectionalArrowLength(2.5)
+        .linkDirectionalArrowRelPos(1)
+        .linkDirectionalParticles(0)
+        .enableNodeDrag(false)        // dragging always orbits the camera (no node-dragging)
+        .enableNavigationControls(true)
+        .showNavInfo(false)
+        .cooldownTicks(120);          // settle the layout, then freeze (no perpetual drift)
 
-    function resetView() { network.fit({ animation: true }); }
-
-    function togglePhysics() {
-      physicsEnabled = !physicsEnabled;
-      network.setOptions({ physics: { enabled: physicsEnabled } });
-    }
-
-    // Search
-    document.getElementById('search').addEventListener('input', function(e) {
-      const query = e.target.value.toLowerCase();
-      if (!query) {
-        nodes.forEach(n => nodes.update({ id: n.id, opacity: 1 }));
-        return;
-      }
-      nodes.forEach(n => {
-        const match = n.id.toLowerCase().includes(query) || n.label.toLowerCase().includes(query);
-        nodes.update({ id: n.id, opacity: match ? 1 : 0.15 });
-      });
-      const matches = nodes.get().filter(n => n.id.toLowerCase().includes(query));
-      if (matches.length === 1) {
-        network.focus(matches[0].id, { scale: 1.5, animation: true });
-      }
-    });
-
-    // Click to highlight connections
-    network.on('click', function(params) {
-      if (params.nodes.length > 0) {
-        const nodeId = params.nodes[0];
-        const connected = network.getConnectedNodes(nodeId);
-        nodes.forEach(n => {
-          const isConnected = connected.includes(n.id) || n.id === nodeId;
-          nodes.update({ id: n.id, opacity: isConnected ? 1 : 0.15 });
+      // Persistent text labels via three-spritetext (in addition to the sphere).
+      function applyLabels() {
+        Graph.nodeThreeObjectExtend(true).nodeThreeObject(n => {
+          if (!showLabels || typeof SpriteText === 'undefined') return null;
+          const sprite = new SpriteText(n.label);
+          sprite.color = '#c9d1d9';
+          sprite.textHeight = 3;
+          sprite.position.y = -6;
+          return sprite;
         });
-      } else {
-        nodes.forEach(n => nodes.update({ id: n.id, opacity: 1 }));
       }
-    });
+      applyLabels();
+
+      // Explicitly disable auto-rotation — the scene is still until the user drags it.
+      const controls = Graph.controls();
+      if (controls) {
+        controls.autoRotate = false;
+        controls.enableZoom = true;   // scroll to zoom
+        controls.enableRotate = true; // drag to rotate
+      }
+
+      // Fit the whole graph once the initial layout settles.
+      Graph.onEngineStop(() => Graph.zoomToFit(600, 60));
+
+      // Controls
+      document.getElementById('btn-reset').addEventListener('click', () => Graph.zoomToFit(600, 60));
+
+      document.getElementById('btn-labels').addEventListener('click', () => {
+        showLabels = !showLabels;
+        applyLabels();
+      });
+
+      const spinBtn = document.getElementById('btn-spin');
+      spinBtn.addEventListener('click', () => {
+        if (!controls) return;
+        controls.autoRotate = !controls.autoRotate;
+        controls.autoRotateSpeed = 1.2;
+        spinBtn.textContent = 'Auto-Rotate: ' + (controls.autoRotate ? 'On' : 'Off');
+      });
+
+      // Search → focus the matching node by flying the camera to it.
+      document.getElementById('search').addEventListener('input', (e) => {
+        const q = e.target.value.toLowerCase().trim();
+        if (!q) return;
+        const match = graphData.nodes.find(n => n.id.toLowerCase().includes(q));
+        if (match && match.x !== undefined) {
+          const dist = 80;
+          const ratio = 1 + dist / Math.hypot(match.x, match.y, match.z || 0);
+          Graph.cameraPosition(
+            { x: match.x * ratio, y: match.y * ratio, z: (match.z || 0) * ratio },
+            match,
+            1000,
+          );
+        }
+      });
+
+      window.addEventListener('resize', () => {
+        Graph.width(window.innerWidth).height(window.innerHeight);
+      });
+    }
   </script>
 </body>
 </html>`;

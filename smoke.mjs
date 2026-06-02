@@ -5,10 +5,10 @@ const CLI = 'dist/cli.js';
 const SCHEMA_VERSION = '1.0.0';
 const EXEC_OPTS = { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 60000 };
 
-// MCP stdio timing (ms): give the server time to boot before list/call, then to respond.
-const MCP_LIST_DELAY_MS = 200;
-const MCP_CALL_DELAY_MS = 500;
-const MCP_COLLECT_MS = 1400;
+// MCP stdio timing (ms): sequential waits for each handshake step.
+const MCP_BOOT_MS = 200; // boot before tools/list
+const MCP_TOOLS_MS = 300; // tools/list before tools/call
+const MCP_RESPONSE_MS = 900; // tools/call response before shutdown
 const MCP_EXPECTED_MARKERS = ['scan_security', 'query_graph', 'schemaVersion'];
 
 let pass = 0;
@@ -73,12 +73,16 @@ function rpc(id, method, params = {}) {
   return JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n';
 }
 
-function mcpOk() {
-  return new Promise((resolve) => {
-    const server = spawn('node', [CLI, 'serve'], { stdio: ['pipe', 'pipe', 'pipe'] });
-    let out = '';
-    server.stdout.on('data', (chunk) => (out += chunk));
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
+async function mcpOk() {
+  const server = spawn('node', [CLI, 'serve'], { stdio: ['pipe', 'pipe', 'pipe'] });
+  let out = '';
+  server.stdout.on('data', (chunk) => (out += chunk));
+
+  try {
     server.stdin.write(
       rpc(0, 'initialize', {
         protocolVersion: '2024-11-05',
@@ -86,20 +90,22 @@ function mcpOk() {
         clientInfo: { name: 't', version: '1' },
       }),
     );
-    setTimeout(() => server.stdin.write(rpc(1, 'tools/list')), MCP_LIST_DELAY_MS);
-    setTimeout(
-      () => server.stdin.write(rpc(2, 'tools/call', { name: 'get_minimal_context', arguments: {} })),
-      MCP_CALL_DELAY_MS,
-    );
-    setTimeout(() => {
-      server.kill();
-      const ok = MCP_EXPECTED_MARKERS.every((marker) => out.includes(marker));
-      const label = 'MCP serve (stdio: list + call)';
-      if (ok) recordPass(label);
-      else recordFail(label, 'missing expected tool/schema markers');
-      resolve();
-    }, MCP_COLLECT_MS);
-  });
+
+    await delay(MCP_BOOT_MS);
+    server.stdin.write(rpc(1, 'tools/list'));
+
+    await delay(MCP_TOOLS_MS);
+    server.stdin.write(rpc(2, 'tools/call', { name: 'get_minimal_context', arguments: {} }));
+
+    await delay(MCP_RESPONSE_MS);
+  } finally {
+    server.kill();
+  }
+
+  const ok = MCP_EXPECTED_MARKERS.every((marker) => out.includes(marker));
+  const label = 'MCP serve (stdio: list + call)';
+  if (ok) recordPass(label);
+  else recordFail(label, 'missing expected tool/schema markers');
 }
 
 const JSON_CASES = [

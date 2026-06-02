@@ -6,9 +6,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Nodes | 71 |
+| Nodes | 70 |
 | Edges | 284 |
-| Avg connections/file | 8 |
+| Avg connections/file | 8.1 |
 | Max fan-in | 30 |
 | Max fan-out | 26 |
 
@@ -56,11 +56,6 @@ src/types module (1 files)
 root module (1 files)
 
 - vitest.config.ts
-
-### root
-root module (1 files)
-
-- audit.mjs
 
 ### root
 root module (1 files)
