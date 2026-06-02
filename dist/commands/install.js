@@ -91,6 +91,12 @@ export async function runInstall(ctx, opts) {
         case 'kiro':
             await installKiro(projectRoot);
             break;
+        case 'cursor':
+            await installCursor(projectRoot);
+            break;
+        case 'claude':
+            await installClaude(projectRoot);
+            break;
         default:
             await installKiro(projectRoot);
             break;
@@ -141,6 +147,84 @@ async function installKiro(projectRoot) {
     output.push(`    Type ${brand.info('/vibeguard scan')} to run a security scan`);
     output.push(`    Type ${brand.info('/vibeguard health')} for project health`);
     output.push(`    Type ${brand.info('/vibeguard pack "fix auth"')} for optimized context`);
+    output.push('');
+    process.stdout.write(output.join('\n') + '\n');
+}
+async function installCursor(projectRoot) {
+    const rulesDir = join(projectRoot, '.cursor', 'rules');
+    await mkdir(rulesDir, { recursive: true });
+    const cursorRule = `---
+description: VibeGuard — intelligent context selection for code understanding
+alwaysApply: true
+---
+
+# VibeGuard Integration
+
+When answering questions about this codebase:
+1. Run \`npx vibeguard pack "<user question>" --json\` to get optimized file selection
+2. Read only the files listed in the result (5-15 most relevant files)
+3. Never blindly read the entire project — use the dependency graph
+
+Available commands:
+- \`npx vibeguard --scan\` — Security scan
+- \`npx vibeguard --health\` — Project health score
+- \`npx vibeguard attack\` — Cyberattack vulnerability scan
+- \`npx vibeguard graph\` — Generate interactive HTML graph
+- \`npx vibeguard pack "task"\` — Generate context package (80-95% token reduction)
+
+The dependency graph is at \`.vibeguard/graph.json\`. Use it to understand file relationships before answering architecture questions.
+`;
+    await writeFile(join(rulesDir, 'vibeguard.mdc'), cursorRule, 'utf-8');
+    const output = [];
+    output.push('');
+    output.push(header('VibeGuard — Cursor Install', '⚡'));
+    output.push('');
+    output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.cursor/rules/vibeguard.mdc')}`);
+    output.push('');
+    output.push(`  ${brand.primary.bold('Done!')} VibeGuard is now always-on in Cursor.`);
+    output.push(`  ${brand.muted('Cursor will use the dependency graph to select relevant files automatically.')}`);
+    output.push('');
+    process.stdout.write(output.join('\n') + '\n');
+}
+async function installClaude(projectRoot) {
+    const { readFile: rf } = await import('node:fs/promises');
+    const claudeSection = `
+## VibeGuard — Intelligent Context Selection
+
+When working on this codebase:
+1. Before answering questions, run: \`npx vibeguard pack "<task>" --json\`
+2. Read ONLY the files listed in the output (5-15 most relevant)
+3. Use \`.vibeguard/graph.json\` to understand file relationships
+4. Never read the entire project blindly — the graph tells you what's connected
+
+Available tools:
+- \`npx vibeguard --scan\` — Find secrets & vulnerabilities
+- \`npx vibeguard --health\` — Project quality score (0-100)
+- \`npx vibeguard attack --ai --fix\` — AI-powered security fix
+- \`npx vibeguard graph\` — Generate interactive dependency graph
+- \`npx vibeguard pack "task"\` — Get optimized context (80-95% fewer tokens)
+`;
+    const claudePath = join(projectRoot, 'CLAUDE.md');
+    let existingContent = '';
+    try {
+        existingContent = await rf(claudePath, 'utf-8');
+    }
+    catch {
+        // doesn't exist
+    }
+    if (existingContent.includes('VibeGuard')) {
+        process.stdout.write(`\n  ${statusIcon('info')} ${brand.muted('CLAUDE.md already contains VibeGuard section.')}\n\n`);
+        return;
+    }
+    const newContent = existingContent + '\n' + claudeSection;
+    await writeFile(claudePath, newContent, 'utf-8');
+    const output = [];
+    output.push('');
+    output.push(header('VibeGuard — Claude Code Install', '⚡'));
+    output.push('');
+    output.push(`  ${statusIcon('success')} ${brand.success('Added VibeGuard section to')} ${brand.muted('CLAUDE.md')}`);
+    output.push('');
+    output.push(`  ${brand.primary.bold('Done!')} Claude Code will now use the dependency graph automatically.`);
     output.push('');
     process.stdout.write(output.join('\n') + '\n');
 }

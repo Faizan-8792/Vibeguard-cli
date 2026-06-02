@@ -1,6 +1,6 @@
 import { readFile, writeFile, chmod, rm, access } from 'node:fs/promises';
 import { join } from 'node:path';
-import { header, statusIcon, brand, divider } from '../utils/ui.js';
+import { header, statusIcon, brand } from '../utils/ui.js';
 import { VibeguardError, ErrorCodes } from '../utils/errors.js';
 import type { CommandContext } from '../cli.js';
 
@@ -8,54 +8,9 @@ export interface HookCommandOptions {
   action: string;
 }
 
-// The pre-commit hook script — runs vibeguard security scan and blocks on critical/high
+// Pre-commit hook script (cross-platform sh + node for JSON parsing)
 const PRE_COMMIT_HOOK = `#!/bin/sh
 # VibeGuard Pre-Commit Security Hook
-# Automatically scans for secrets and vulnerabilities before each commit.
-# To bypass (emergency): git commit --no-verify
-
-echo ""
-echo "🛡️  VibeGuard: Running pre-commit security scan..."
-echo ""
-
-# Run security scan in JSON mode
-RESULT=$(npx vibeguard security --json 2>/dev/null)
-
-if [ $? -ne 0 ]; then
-  echo "⚠️  VibeGuard: Security scan failed to run. Allowing commit."
-  exit 0
-fi
-
-# Extract critical and high counts
-CRITICAL=$(echo "$RESULT" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const j=JSON.parse(d);console.log(j.counts.critical||0)}catch{console.log(0)}})" 2>/dev/null)
-HIGH=$(echo "$RESULT" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const j=JSON.parse(d);console.log(j.counts.high||0)}catch{console.log(0)}})" 2>/dev/null)
-
-if [ "$CRITICAL" -gt 0 ] 2>/dev/null || [ "$HIGH" -gt 0 ] 2>/dev/null; then
-  echo "❌ VibeGuard: COMMIT BLOCKED"
-  echo ""
-  echo "   Found: $CRITICAL critical, $HIGH high severity issues"
-  echo ""
-  echo "   These issues MUST be fixed before committing:"
-  echo ""
-  # Show human-readable issues
-  npx vibeguard security 2>/dev/null | head -60
-  echo ""
-  echo "   Fix with: npx vibeguard security --fix gitignore"
-  echo "             npx vibeguard security --fix env"
-  echo ""
-  echo "   To bypass (not recommended): git commit --no-verify"
-  echo ""
-  exit 1
-fi
-
-echo "✅ VibeGuard: No critical/high security issues. Commit allowed."
-echo ""
-exit 0
-`;
-
-// Windows-compatible pre-commit hook (PowerShell)
-const PRE_COMMIT_HOOK_WIN = `#!/bin/sh
-# VibeGuard Pre-Commit Security Hook (Windows-compatible)
 # Scans for secrets and vulnerabilities before each commit.
 # To bypass: git commit --no-verify
 
@@ -154,7 +109,7 @@ async function installHook(projectRoot: string, json: boolean): Promise<void> {
   }
 
   // Write the hook
-  await writeFile(hookPath, PRE_COMMIT_HOOK_WIN, 'utf-8');
+  await writeFile(hookPath, PRE_COMMIT_HOOK, 'utf-8');
   try {
     await chmod(hookPath, 0o755);
   } catch {

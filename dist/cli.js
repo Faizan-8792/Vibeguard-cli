@@ -241,6 +241,38 @@ function setupProgram() {
             throw new VibeguardError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action: "${action}". Use: vibeguard kiro install | uninstall`);
         }
     });
+    // cursor command
+    program
+        .command('cursor')
+        .description('Install/uninstall VibeGuard for Cursor IDE')
+        .argument('<action>', 'Action: install, uninstall')
+        .action(async (action) => {
+        const globalOpts = program.opts();
+        const ctx = await createContext(globalOpts, 'install');
+        const { runInstall, runUninstall } = await import('./commands/install.js');
+        if (action === 'install')
+            await runInstall(ctx, { platform: 'cursor' });
+        else if (action === 'uninstall')
+            await runUninstall(ctx, { platform: 'cursor' });
+        else
+            throw new VibeguardError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: vibeguard cursor install | uninstall`);
+    });
+    // claude command
+    program
+        .command('claude')
+        .description('Install/uninstall VibeGuard for Claude Code')
+        .argument('<action>', 'Action: install, uninstall')
+        .action(async (action) => {
+        const globalOpts = program.opts();
+        const ctx = await createContext(globalOpts, 'install');
+        const { runInstall, runUninstall } = await import('./commands/install.js');
+        if (action === 'install')
+            await runInstall(ctx, { platform: 'claude' });
+        else if (action === 'uninstall')
+            await runUninstall(ctx, { platform: 'claude' });
+        else
+            throw new VibeguardError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: vibeguard claude install | uninstall`);
+    });
     // install command
     program
         .command('install')
@@ -310,6 +342,17 @@ function setupProgram() {
         const ctx = await createContext(globalOpts, 'hook');
         const { runHook } = await import('./commands/hook.js');
         await runHook(ctx, { action });
+    });
+    // graph command — generate interactive HTML visualization
+    program
+        .command('graph')
+        .description('Generate interactive HTML dependency graph (opens in browser)')
+        .option('--no-open', 'Do not auto-open the HTML file in browser')
+        .action(async (cmdOpts) => {
+        const globalOpts = program.opts();
+        const ctx = await createContext(globalOpts, 'graph');
+        const { runGraph } = await import('./commands/graph.js');
+        await runGraph(ctx, { open: cmdOpts.open !== false });
     });
     return program;
 }
