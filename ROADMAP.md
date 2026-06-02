@@ -153,6 +153,23 @@ prose — safety first.
 - [x] `doctor` shows a "Caveman: on (ultra)" status line (text + JSON)
 - [x] `caveman benchmark` — real measured token savings per level (deterministic compressor)
 
+### 🛡️ Security Hardening — best-of Trivy + Semgrep + CodeQL (local, zero-network) — SHIPPED ✅
+*Inspired by Trivy (SCA + misconfig + SBOM), Semgrep & CodeQL (taint dataflow). All
+runs locally with no API key; advisory data is bundled, not fetched.*
+
+- [x] **Dependency audit (SCA)** — `dependency-auditor.ts`: parses `package.json` +
+      lockfiles, matches installed versions against a bundled vulnerability advisory DB
+      (semver-range aware), flags known-vulnerable, deprecated, and risky-license deps
+- [x] **SBOM output** — `vibeguard audit --sbom` emits a CycloneDX component inventory
+- [x] **Taint dataflow analysis** — `taint-analyzer.ts`: tracks untrusted sources
+      (`req.body`/`req.query`/`process.argv`/etc.) to dangerous sinks (exec, query, eval,
+      `innerHTML`, fetch, fs) with sanitizer awareness + confidence scoring
+- [x] **Misconfiguration scan (IaC)** — `misconfig-scanner.ts`: Dockerfile, `.env`,
+      CI workflows, and `tsconfig` insecure settings
+- [x] **Unified `vibeguard audit`** — runs SCA + taint + misconfig + secret + attack
+      scans, with a 0-100 security score and `--json` contract
+- [x] Folded dependency findings into `doctor`, and exposed an MCP `run_audit` tool
+
 ### 🌅 Later (bigger bets)
 - [ ] **Exports:** `visualize --format graphml|cypher|obsidian|svg`, `wiki`, `graph-diff <ref>`
 - [ ] **Multi-repo:** `register`/`repos`, `cross-search`, background daemon, `~/.vibeguard/watch.toml`

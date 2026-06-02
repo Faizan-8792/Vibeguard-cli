@@ -35,6 +35,7 @@ export const TOOL_NAMES = [
   'pack_context',
   'detect_dead_code',
   'set_caveman',
+  'run_audit',
 ] as const;
 
 export type ToolName = (typeof TOOL_NAMES)[number];
@@ -318,6 +319,45 @@ export function createTools(): ToolDefinition[] {
           enabled: state.enabled,
           level: state.level,
           estimatedSavingsPct: state.enabled ? estimatedSavingsPct(state.level) : 0,
+        };
+      },
+    },
+    {
+      name: 'run_audit',
+      description: 'Unified local security audit: dependency CVEs (SCA), taint dataflow (source→sink), misconfiguration (IaC), secrets & attack patterns. Returns a 0-100 security score and findings.',
+      inputSchema: { type: 'object', properties: {} },
+      async run(_args, { projectRoot }) {
+        const { auditDependencies } = await import('../engines/dependency-auditor.js');
+        const { analyzeTaint } = await import('../engines/taint-analyzer.js');
+        const { scanMisconfig } = await import('../engines/misconfig-scanner.js');
+        const { scanSecurity } = await import('../engines/security-scanner.js');
+        const { scanAttacks } = await import('../engines/attack-scanner.js');
+        const { computeRiskScore } = await import('../commands/audit.js');
+        const config = await loadConfig(projectRoot);
+        const files = await resolveFiles(projectRoot, config.effectiveInclude, config.effectiveSkipSet);
+
+        const [deps, taint, misconfig, security, attacks] = await Promise.all([
+          auditDependencies(projectRoot),
+          analyzeTaint(projectRoot, files),
+          scanMisconfig(projectRoot, files),
+          scanSecurity(projectRoot, files, config),
+          scanAttacks(projectRoot, files, config),
+        ]);
+
+        type Sev = 'critical' | 'high' | 'medium' | 'low' | 'info';
+        const totals: Record<Sev, number> = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
+        for (const src of [deps.counts, taint.counts, misconfig.counts, security.counts, attacks.counts]) {
+          for (const sev of Object.keys(totals) as Sev[]) totals[sev] += src[sev] ?? 0;
+        }
+
+        return {
+          securityScore: computeRiskScore(totals),
+          totals,
+          dependencies: deps.summary,
+          taintFindings: taint.findings.length,
+          misconfigFindings: misconfig.findings.length,
+          secretFindings: security.issues.length,
+          attackFindings: attacks.findings.length,
         };
       },
     },

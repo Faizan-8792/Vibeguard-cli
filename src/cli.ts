@@ -596,6 +596,19 @@ function setupProgram(): Command {
       await runCaveman(ctx, { action: resolvedAction, level });
     });
 
+  // audit command — unified security audit (SCA + taint + misconfig + secrets + attacks)
+  program
+    .command('audit')
+    .description('Unified security audit: dependency CVEs, taint dataflow, misconfiguration, secrets & attacks')
+    .option('--min-severity <level>', 'Only show findings at/above this severity (critical|high|medium|low)')
+    .option('--sbom', 'Also write a CycloneDX SBOM to .vibeguard/sbom.json', false)
+    .action(async (cmdOpts) => {
+      const globalOpts = program.opts() as GlobalOptions;
+      const ctx = await createContext(globalOpts, 'audit');
+      const { runAudit } = await import('./commands/audit.js');
+      await runAudit(ctx, { minSeverity: cmdOpts.minSeverity, sbom: cmdOpts.sbom === true });
+    });
+
   return program;
 }
 

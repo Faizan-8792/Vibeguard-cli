@@ -185,6 +185,7 @@ An AI agent can also toggle it live via the MCP `set_caveman` tool, and `vibegua
 | `vibeguard security` | Scan secrets & framework security gaps |
 | `vibeguard security --fix gitignore\|env` | Auto-fix the common gaps |
 | `vibeguard attack [--ai] [--fix]` | Cyberattack scan (+ optional AI review/fix) |
+| `vibeguard audit [--sbom] [--min-severity]` | Unified security audit: dependency CVEs, taint dataflow, misconfig, secrets & attacks (+ CycloneDX SBOM) |
 | `vibeguard clean --plan \| --apply` | Detect dead code → recoverable trash |
 | `vibeguard trash list \| restore <id>` | Manage soft-deleted files |
 | `vibeguard add <file.pdf>` | Link PDF concepts into the graph |
