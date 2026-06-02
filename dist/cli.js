@@ -300,6 +300,17 @@ function setupProgram() {
             test: cmdOpts.test,
         });
     });
+    // hook command — git pre-commit security hook
+    program
+        .command('hook')
+        .description('Manage git pre-commit security hook (blocks commits with secrets)')
+        .argument('<action>', 'Action: install, uninstall, status')
+        .action(async (action) => {
+        const globalOpts = program.opts();
+        const ctx = await createContext(globalOpts, 'hook');
+        const { runHook } = await import('./commands/hook.js');
+        await runHook(ctx, { action });
+    });
     return program;
 }
 async function main() {
