@@ -1,0 +1,15 @@
+{
+  "version": "1.0.0",
+  "enabled": true,
+  "name": "Senior Engineer Final Review",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Perform a final senior-engineer review of all files changed during this run.\n\nYour role:\nAct as an experienced senior/staff engineer performing a final pre-merge review. Treat this as the last quality gate before the work is considered complete.\n\nReview goals:\n1. Verify the implementation is correct, stable, and consistent with the intended task.\n2. Check for architecture issues, poor boundaries, unnecessary complexity, and weak abstractions.\n3. Check for duplicated logic, bad naming, unstable implementations, and maintainability concerns.\n4. Check for performance issues, scalability risks, inefficient patterns, and avoidable waste.\n5. Check for security risks, missing validation, unsafe assumptions, and weak error handling.\n6. Check for UI/UX consistency, responsiveness, and integration quality when frontend changes are involved.\n7. Check that the implementation fits the existing codebase conventions and does not introduce hidden regressions.\n\nOperating rules:\n- Review only the files changed in this run and directly impacted surrounding files.\n- Preserve the intended behavior and scope of the completed work.\n- Automatically improve weak areas only when the fix is local, safe, low-risk, and clearly beneficial.\n- Do not perform broad rewrites, speculative refactors, or unrelated cleanup at this stage.\n- If an issue is important but risky or under-specified, do not force a change. Flag it clearly as a follow-up item.\n- Prefer high-signal improvements over stylistic churn.\n\nValidation requirements:\n- Verify imports, exports, and references are correct.\n- Verify syntax, type correctness, and interface consistency.\n- Run the smallest relevant lint, typecheck, test, or build commands available for the affected scope.\n- If the change affects runtime integration, startup paths, routing, schemas, or deployment behavior, run the appropriate broader validation.\n- Check for likely regressions in impacted flows.\n- Confirm project stability is maintained after any final fixes.\n\nDecision rules:\n- PASS if the implementation is production-ready with no meaningful blockers.\n- PASS WITH NOTES if the implementation is acceptable but has minor non-blocking concerns or recommended follow-ups.\n- NEEDS FOLLOW-UP if important issues remain that should be addressed before considering the work complete.\n\nFinal output format:\n1. Final verdict: PASS / PASS WITH NOTES / NEEDS FOLLOW-UP\n2. What was reviewed\n3. Safe improvements applied\n4. Validation performed\n5. Remaining concerns or follow-up items\n6. Short final assessment of production readiness"
+  },
+  "workspaceFolderName": "ficcs-website",
+  "shortName": "senior-engineer-final-review",
+  "description": "At the end of the agent run, perform a final production-grade engineering review of all recent changes, apply safe last-mile fixes where justified, validate stability, and return a merge-style verdict with any remaining risks or follow-up items."
+}

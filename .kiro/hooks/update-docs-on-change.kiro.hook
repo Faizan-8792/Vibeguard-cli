@@ -1,0 +1,22 @@
+{
+  "enabled": true,
+  "name": "Update Docs on Source Change",
+  "description": "When source files (JS, JSX, JSON configs, or environment examples) are edited, ask the agent to review and update relevant documentation in README.md or any /docs folder to keep docs in sync with code changes.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "*.js",
+      "*.jsx",
+      "*.json",
+      "*.md",
+      "*.env.example"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A source or project file was modified. Determine whether documentation must be updated to keep the repository accurate and in sync with the code.\n\nPrimary goal:\nUpdate only the documentation that is actually affected by the latest change, while preserving the existing structure, tone, and level of detail of the docs.\n\nStep 1: Detect documentation impact\nReview the changed file and determine whether it affects any of the following:\n- public or developer-facing features\n- setup or installation steps\n- configuration or environment variables\n- scripts, commands, or package usage\n- API contracts, request/response shapes, routes, or integration behavior\n- folder structure, architecture, or project organization\n- usage examples, code samples, or workflows\n- limitations, caveats, or important behavior changes\n\nStep 2: Locate the right documentation targets\nCheck only the most relevant documentation locations first:\n- nearest README.md\n- root README.md\n- docs/ folder content\n- setup, configuration, API, architecture, or usage docs\n- example files or developer guides if present\n\nDo not rewrite unrelated documentation.\n\nStep 3: Decide whether an update is needed\nUpdate docs only if the latest code change creates real documentation drift.\nIf no meaningful doc change is needed, say so briefly and make no edits.\n\nStep 4: Apply high-quality documentation updates\nWhen updating docs:\n- keep the wording precise, concise, and consistent with the repository’s current writing style\n- preserve existing formatting, headings, and document structure unless a structural change is clearly needed\n- update only the smallest necessary sections\n- prefer concrete examples over vague explanations\n- reflect actual code behavior, names, paths, commands, and config keys exactly\n- avoid generic AI-sounding filler or marketing language\n- avoid inventing features, commands, flags, or behavior not supported by the codebase\n\nStep 5: Validate documentation accuracy\nBefore finishing:\n- verify file names, commands, paths, APIs, config keys, and environment variables against the code\n- ensure examples match the current implementation\n- ensure documentation does not contradict existing docs elsewhere\n- if multiple docs are now inconsistent, update the minimum set needed to restore consistency\n\nDecision rules:\n- Automatically update docs for safe, clear documentation drift.\n- Do not make speculative documentation changes for behavior that is unclear from the code.\n- If the code change is incomplete or ambiguous, leave a concise note describing what documentation likely needs follow-up.\n\nCompletion output:\nProvide a concise summary with:\n1. whether docs were updated or not,\n2. which doc files were changed,\n3. what information was synchronized,\n4. any documentation follow-up still needed."
+  },
+  "workspaceFolderName": "ficcs-website",
+  "shortName": "update-docs-on-change"
+}

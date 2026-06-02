@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "enabled": true,
+  "name": "Intelligent Refactoring & Architecture Optimization",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "**"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Analyze the recently modified file and only the directly affected related files.\n\nYour objective is to perform safe, production-grade refactoring that improves maintainability, readability, modularity, and scalability without changing intended behavior.\n\nPrimary refactoring targets:\n1. Remove duplicated or redundant logic.\n2. Extract oversized functions, components, or modules when cohesion is poor.\n3. Improve naming clarity for variables, functions, types, and modules.\n4. Simplify overly complex control flow and reduce nesting where possible.\n5. Improve separation of concerns and module boundaries.\n6. Improve type safety, validation, and interface clarity.\n7. Remove unused code, imports, exports, and dead branches when safe.\n8. Improve reusability of utilities and shared components where it clearly reduces duplication.\n9. Modernize outdated patterns only when the change is low risk and locally justified.\n10. Improve performance only for obvious inefficiencies or repeated waste in hot paths.\n11. Improve UI consistency or responsiveness only when directly affected by the saved file.\n\nOperating rules:\n- Start with the saved file, then inspect only directly impacted dependencies, dependents, and related modules.\n- Preserve behavior, public APIs, routing contracts, schema contracts, and existing architecture unless a targeted refactor clearly improves the code with low risk.\n- Prefer small, reviewable diffs over large rewrites.\n- Do not reorganize unrelated folders or perform repo-wide cleanup from a single file save.\n- Do not introduce new libraries, major patterns, or framework migrations unless explicitly required.\n- Avoid speculative abstraction. Extract only when duplication or complexity is real.\n- Keep naming, style, and conventions aligned with the existing codebase.\n- If a refactor is risky, cross-cutting, destructive, or likely to change behavior, stop and clearly explain the proposed change instead of applying it automatically.\n\nRefactoring priorities:\n1. Correctness and stability.\n2. Readability and maintainability.\n3. Modularity and separation of concerns.\n4. Type safety and validation.\n5. Performance improvements with clear local benefit.\n\nRequired checks after refactoring:\n- Validate imports, exports, and references.\n- Check syntax and type correctness.\n- Run the smallest relevant lint, typecheck, or test commands available for the affected area.\n- If the change affects integration boundaries, run the relevant broader build or test command.\n- Re-check for regressions introduced by the refactor.\n\nCompletion criteria:\n- The affected code is cleaner and easier to maintain.\n- No known behavior regressions were introduced.\n- No new syntax, import, lint, or type issues remain.\n- Summarize the refactor in concise bullets: what changed, why it improved the code, and what validation was run."
+  },
+  "workspaceFolderName": "ficcs-website",
+  "shortName": "intelligent-refactoring-architecture-optimization-2",
+  "description": "On file save, inspect the recently changed files and directly related modules for safe, behavior-preserving refactors that improve maintainability, structure, readability, and scalability without introducing unnecessary architectural churn."
+}

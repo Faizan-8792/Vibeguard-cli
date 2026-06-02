@@ -1,0 +1,51 @@
+{
+  "name": "vibeguard",
+  "version": "0.1.0",
+  "description": "Local-only CLI tool for TypeScript/JavaScript static analysis, dead code detection, and context packaging",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "vibeguard": "./dist/cli.js"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest --run",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": [
+    "cli",
+    "static-analysis",
+    "typescript",
+    "dead-code",
+    "security",
+    "context"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@inquirer/prompts": "^8.5.2",
+    "chalk": "5.4.1",
+    "clipboardy": "^5.3.1",
+    "commander": "13.1.0",
+    "fs-extra": "11.3.0",
+    "ora": "8.2.0",
+    "picomatch": "^4.0.2",
+    "ts-morph": "25.0.0",
+    "typescript": "5.8.3",
+    "uuid": "11.1.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "11.0.4",
+    "@types/node": "22.15.18",
+    "@types/picomatch": "^3.0.1",
+    "@types/uuid": "10.0.0",
+    "fast-check": "4.1.1",
+    "vitest": "3.1.3"
+  }
+}

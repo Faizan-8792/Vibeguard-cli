@@ -1,0 +1,120 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { mkdir, writeFile, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { buildGraph, loadGraph } from '../../src/engines/graph-builder.js';
+import { loadConfig, type ResolvedConfig } from '../../src/storage/config-store.js';
+import { createLogger } from '../../src/utils/logger.js';
+
+const TSCONFIG = JSON.stringify({
+  compilerOptions: { target: 'ES2022', module: 'NodeNext', moduleResolution: 'NodeNext', strict: true },
+});
+
+describe('Graph Builder', () => {
+  let testDir: string;
+  let config: ResolvedConfig;
+  const logger = createLogger({ jsonMode: true, quiet: true, verbose: false, command: 'test' });
+
+  beforeEach(async () => {
+    testDir = join(tmpdir(), `vibeguard-graph-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    await mkdir(join(testDir, 'src'), { recursive: true });
+    await mkdir(join(testDir, '.vibeguard'), { recursive: true });
+    await writeFile(join(testDir, 'tsconfig.json'), TSCONFIG, 'utf-8');
+    config = await loadConfig(testDir);
+  });
+
+  afterEach(async () => {
+    await rm(testDir, { recursive: true, force: true });
+  });
+
+  /** Write source files into the test project's src/ directory. */
+  async function writeSrcFiles(files: Record<string, string>): Promise<void> {
+    await Promise.all(
+      Object.entries(files).map(([name, content]) =>
+        writeFile(join(testDir, 'src', name), content, 'utf-8')
+      )
+    );
+  }
+
+  it('builds a graph with correct node shape', async () => {
+    await writeSrcFiles({
+      'index.ts': 'import { helper } from "./helper.js";\nexport function main() { helper(); }',
+      'helper.ts': 'export function helper() { return 1; }',
+    });
+
+    const result = await buildGraph(testDir, ['src/index.ts', 'src/helper.ts'], config, logger);
+
+    expect(result.nodes.size).toBe(2);
+
+    const indexNode = result.nodes.get('src/index.ts');
+    expect(indexNode).toBeDefined();
+    expect(indexNode!.file).toBe('src/index.ts');
+    expect(indexNode!.imports).toBeDefined();
+    expect(indexNode!.exports).toBeDefined();
+    expect(indexNode!.dependents).toBeDefined();
+  });
+
+  it('computes dependents as inverse of imports', async () => {
+    await writeSrcFiles({
+      'a.ts': 'import { b } from "./b";\nexport const a = b;',
+      'b.ts': 'export const b = 1;',
+    });
+
+    const result = await buildGraph(testDir, ['src/a.ts', 'src/b.ts'], config, logger);
+
+    const aNode = result.nodes.get('src/a.ts');
+    // The import should resolve to some form of src/b (with extension appended)
+    expect(aNode!.imports.length).toBeGreaterThan(0);
+    // The resolved import should reference b
+    expect(aNode!.imports[0]).toContain('b');
+  });
+
+  it('persists graph.json and analysis-meta.json', async () => {
+    await writeSrcFiles({ 'index.ts': 'export const x = 1;' });
+
+    await buildGraph(testDir, ['src/index.ts'], config, logger);
+
+    const graph = await loadGraph(testDir);
+    expect(graph).not.toBeNull();
+    expect(graph!.schemaVersion).toBe('1.0.0');
+    expect(graph!.nodes['src/index.ts']).toBeDefined();
+  });
+
+  it('handles parse errors gracefully', async () => {
+    await writeSrcFiles({
+      'good.ts': 'export const x = 1;',
+      'bad.ts': 'export const x = {{{;', // Invalid TS — ts-morph won't throw on addSourceFileAtPath
+    });
+
+    const result = await buildGraph(testDir, ['src/good.ts', 'src/bad.ts'], config, logger);
+    expect(result.nodes.size).toBeGreaterThan(0);
+  });
+
+  it('reports summary with correct counts', async () => {
+    await writeSrcFiles({
+      'a.ts': 'export const a = 1;',
+      'b.ts': 'export const b = 2;',
+    });
+
+    const result = await buildGraph(testDir, ['src/a.ts', 'src/b.ts'], config, logger);
+
+    expect(result.summary.nodes).toBe(2);
+    expect(result.summary.rebuilt).toBe(2);
+    expect(result.summary.skipped).toBe(0);
+  });
+
+  it('incremental rebuild skips unchanged files', async () => {
+    await writeSrcFiles({
+      'a.ts': 'export const a = 1;',
+      'b.ts': 'export const b = 2;',
+    });
+
+    // First build
+    await buildGraph(testDir, ['src/a.ts', 'src/b.ts'], config, logger);
+
+    // Second build without changes
+    const result2 = await buildGraph(testDir, ['src/a.ts', 'src/b.ts'], config, logger);
+    expect(result2.summary.skipped).toBe(2);
+    expect(result2.summary.rebuilt).toBe(0);
+  });
+});

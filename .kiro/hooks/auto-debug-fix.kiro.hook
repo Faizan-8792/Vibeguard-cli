@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "enabled": true,
+  "name": "Auto Debug & Fix",
+  "description": "After code-modifying tools run, inspect the changed files and surrounding dependencies for build, runtime, type, import, lint, and reference issues; apply safe fixes automatically; then verify the project is stable with the most relevant checks for the stack.",
+  "when": {
+    "type": "postToolUse",
+    "toolTypes": [
+      "*"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Analyze the files changed by the latest tool action and any directly affected dependent files.\n\nYour goals:\n1. Detect and fix syntax errors.\n2. Detect and fix type errors.\n3. Detect and fix import/export issues.\n4. Detect and fix lint violations.\n5. Detect and fix broken references, missing symbols, and obvious dependency mismatches.\n6. Detect likely runtime issues caused by the recent change.\n7. Verify the project remains buildable and consistent with existing architecture.\n\nOperating rules:\n- Focus first on the modified files, then expand only to directly impacted files.\n- Prefer minimal, safe, production-quality fixes over broad rewrites.\n- Preserve existing architecture, naming, style, and conventions unless a change is required to resolve an issue.\n- Do not introduce speculative refactors while debugging.\n- Do not ask for confirmation for safe fixes.\n- Ask for confirmation only if a fix is destructive, risky, changes public behavior, changes database schema, removes code, or requires secrets/environment changes.\n- If multiple issues exist, resolve them in dependency order: syntax -> imports -> types -> lint -> runtime/build.\n- After each fix set, re-check for newly exposed issues.\n\nValidation rules:\n- Run the most relevant available validation commands for this project.\n- Prefer existing project scripts over invented commands.\n- If available, use the smallest effective verification first, then broader validation only if needed.\n\nPreferred validation order:\n1. Targeted typecheck or file-level validation.\n2. Targeted lint on changed files.\n3. Relevant unit tests for impacted modules.\n4. Project build if the change affects integration or app startup.\n5. Broader test suites only when necessary.\n\nExecution guidance:\n- Use package-manager and framework conventions already present in the repo.\n- If a command fails, read the error, fix the root cause, and rerun the smallest useful check.\n- Continue until the project is stable or a true blocking issue remains.\n\nCompletion criteria:\n- No remaining obvious syntax, import, type, or lint issues from the latest change.\n- Relevant tests/build checks pass, or the exact blocking issue is identified clearly.\n- Summarize what was fixed, what was validated, and any remaining blocker in concise bullets."
+  },
+  "workspaceFolderName": "ficcs-website",
+  "shortName": "auto-debug-fix"
+}
