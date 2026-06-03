@@ -16,6 +16,10 @@
 
 <br/>
 
+<img src="cli-main.png" alt="CodeScout CLI" width="100%" />
+
+<br/>
+
 [**1. Install**](#-step-1--install) ·
 [**2. Run**](#-step-2--run-it) ·
 [**Modes**](#-graphmode--caveman-mode) ·
