@@ -109,6 +109,9 @@ async function enableAction(ctx: CommandContext, rawLevel: string | undefined, l
   }
   out.push(`    ${brand.muted('Project:')} ${brand.muted(projectRoot)}`);
   out.push('');
+  out.push(`  ${brand.danger.bold('⚠ Start a NEW chat (or reload the IDE window) to apply this.')}`);
+  out.push(`  ${brand.danger('  Open AI sessions cache old instructions until then.')}`);
+  out.push('');
   out.push(divider());
   out.push('');
   out.push(`  ${brand.primary.bold('Why use many token when few do trick.')}`);
@@ -153,8 +156,9 @@ async function disableAction(ctx: CommandContext): Promise<void> {
     out.push('');
   }
   out.push(`  ${brand.muted('Normal mode restored. Replies return to full prose.')}`);
-  out.push(`  ${brand.muted('Tip: if your IDE still shows "Caveman mode: ON", start a NEW chat —')}`);
-  out.push(`  ${brand.muted('open AI sessions cache the old instructions until then.')}`);
+  out.push('');
+  out.push(`  ${brand.danger.bold('⚠ Start a NEW chat (or reload the IDE window) to clear it.')}`);
+  out.push(`  ${brand.danger('  Open AI sessions cache old instructions until then.')}`);
   out.push('');
   process.stdout.write(out.join('\n') + '\n');
 }

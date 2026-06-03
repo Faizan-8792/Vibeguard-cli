@@ -63,6 +63,9 @@ async function enableAction(ctx: CommandContext): Promise<void> {
   out.push(`  ${brand.muted('Build/refresh graph data:')} ${brand.info('vibeguard map')}`);
   out.push(`  ${brand.muted('Turn off:')} ${brand.info('vibeguard graphmode off')}`);
   out.push('');
+  out.push(`  ${brand.danger.bold('⚠ Start a NEW chat (or reload the IDE window) to apply this.')}`);
+  out.push(`  ${brand.danger('  Open AI sessions cache old instructions until then.')}`);
+  out.push('');
   process.stdout.write(out.join('\n') + '\n');
 }
 
@@ -98,8 +101,9 @@ async function disableAction(ctx: CommandContext): Promise<void> {
     out.push('');
   }
   out.push(`  ${brand.muted('Normal mode restored. Graph data is kept for manual use.')}`);
-  out.push(`  ${brand.muted('Tip: if your IDE still shows "GraphMode: ON", start a NEW chat —')}`);
-  out.push(`  ${brand.muted('open AI sessions cache the old instructions until then.')}`);
+  out.push('');
+  out.push(`  ${brand.danger.bold('⚠ Start a NEW chat (or reload the IDE window) to clear it.')}`);
+  out.push(`  ${brand.danger('  Open AI sessions cache old instructions until then.')}`);
   out.push('');
   process.stdout.write(out.join('\n') + '\n');
 }
