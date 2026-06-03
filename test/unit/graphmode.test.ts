@@ -86,3 +86,29 @@ describe('GraphMode engine', () => {
     expect(claude).not.toContain('vibeguard-graphmode:begin');
   });
 });
+
+describe('GraphMode artifact detection (drift)', () => {
+  it('lists rule files when enabled and none after disable', async () => {
+    const { listGraphModeArtifacts } = await import('../../src/engines/graphmode.js');
+    expect(await listGraphModeArtifacts(testDir)).toEqual([]);
+
+    await enableGraphMode(testDir);
+    expect((await listGraphModeArtifacts(testDir)).length).toBeGreaterThan(0);
+
+    await disableGraphMode(testDir);
+    expect(await listGraphModeArtifacts(testDir)).toEqual([]);
+  });
+
+  it('detects stale-on drift: state false but rule files present', async () => {
+    const { saveGraphModeState, loadGraphModeState, listGraphModeArtifacts } =
+      await import('../../src/engines/graphmode.js');
+    // Write rules then force state to disabled to simulate a wrong-folder off.
+    await enableGraphMode(testDir);
+    await saveGraphModeState(testDir, { schemaVersion: '1.0.0', enabled: false, updatedAt: new Date().toISOString() });
+
+    const state = await loadGraphModeState(testDir);
+    const artifacts = await listGraphModeArtifacts(testDir);
+    expect(state.enabled).toBe(false);
+    expect(artifacts.length).toBeGreaterThan(0); // drift: files still tell AI it's on
+  });
+});

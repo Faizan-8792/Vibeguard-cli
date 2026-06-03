@@ -5,6 +5,7 @@ import {
   loadGraphModeState,
   enableGraphMode,
   disableGraphMode,
+  listGraphModeArtifacts,
 } from '../engines/graphmode.js';
 import type { CommandContext } from '../context.js';
 
@@ -95,9 +96,19 @@ async function disableAction(ctx: CommandContext): Promise<void> {
 async function showStatus(ctx: CommandContext): Promise<void> {
   const { projectRoot, options } = ctx;
   const state = await loadGraphModeState(projectRoot);
+  const artifacts = await listGraphModeArtifacts(projectRoot);
+  const driftStaleOn = !state.enabled && artifacts.length > 0;
+  const driftStaleOff = state.enabled && artifacts.length === 0;
 
   if (options.json) {
-    emitJson({ action: 'graphmode-status', enabled: state.enabled, updatedAt: state.updatedAt });
+    emitJson({
+      action: 'graphmode-status',
+      enabled: state.enabled,
+      updatedAt: state.updatedAt,
+      projectRoot,
+      ruleFiles: artifacts,
+      drift: driftStaleOn ? 'stale-on' : driftStaleOff ? 'stale-off' : null,
+    });
     return;
   }
 
@@ -106,8 +117,25 @@ async function showStatus(ctx: CommandContext): Promise<void> {
   out.push(header('GraphMode — Status'));
   out.push('');
   out.push(keyValue('State', state.enabled ? brand.success.bold('ON') : brand.muted('off')));
+  out.push(keyValue('Project', brand.muted(projectRoot)));
+  out.push(keyValue('Rule files', artifacts.length > 0 ? brand.info(String(artifacts.length)) : brand.muted('0')));
   out.push('');
+
+  if (driftStaleOn) {
+    out.push(`  ${statusIcon('warning')} ${brand.warning.bold('Drift detected: state is OFF but rule files still exist.')}`);
+    out.push(`  ${brand.muted('These files still tell your AI to stay in GraphMode:')}`);
+    for (const a of artifacts) out.push(`    ${brand.muted('•')} ${brand.secondary(a)}`);
+    out.push(`  ${brand.muted('Fix (run in THIS project):')} ${brand.info('vibeguard graphmode off')}`);
+    out.push('');
+  } else if (driftStaleOff) {
+    out.push(`  ${statusIcon('warning')} ${brand.warning.bold('Drift detected: state is ON but no rule files found.')}`);
+    out.push(`  ${brand.muted('Re-apply rules with:')} ${brand.info('vibeguard graphmode on')}`);
+    out.push('');
+  }
+
   out.push(`  ${brand.muted(state.enabled ? 'Turn off: vibeguard graphmode off' : 'Enable: vibeguard graphmode on')}`);
+  out.push(`  ${brand.muted('Still seeing "GraphMode: ON" in your IDE after off? Start a NEW chat —')}`);
+  out.push(`  ${brand.muted('the AI caches instructions for the current session until then.')}`);
   out.push('');
   process.stdout.write(out.join('\n') + '\n');
 }

@@ -571,3 +571,33 @@ export function measureCompression(text: string, level: CavemanLevel): Compressi
     compressed,
   };
 }
+
+/**
+ * List every caveman rule artifact currently present on disk for a project —
+ * the per-IDE rule files plus any memory file still carrying the marker block.
+ * Used by `caveman status` to detect drift between the saved state flag and the
+ * real files (e.g. files left behind in an old project, or a stale "enabled"
+ * flag whose rule files were deleted manually).
+ */
+export async function listCavemanArtifacts(projectRoot: string): Promise<string[]> {
+  const present: string[] = [];
+
+  for (const rel of [CAVEMAN_KIRO_STEERING_REL, CAVEMAN_CURSOR_RULE_REL, CAVEMAN_WINDSURF_RULE_REL]) {
+    if (await pathExists(join(projectRoot, rel))) {
+      present.push(rel.replace(/\\/g, '/'));
+    }
+  }
+
+  for (const rel of [...CREATE_MEMORY_FILES, ...FOLD_ONLY_FILES]) {
+    const full = join(projectRoot, rel);
+    if (!(await pathExists(full))) continue;
+    try {
+      const content = await readFile(full, 'utf-8');
+      if (content.includes(CAVEMAN_BEGIN_MARK)) present.push(rel.replace(/\\/g, '/'));
+    } catch {
+      // unreadable — skip
+    }
+  }
+
+  return present;
+}

@@ -276,3 +276,31 @@ export async function disableGraphMode(projectRoot: string): Promise<GraphModeDi
   await saveGraphModeState(projectRoot, state);
   return { state, removed };
 }
+
+/**
+ * List every GraphMode rule artifact currently present on disk for a project.
+ * Used by `graphmode status` to detect drift between the saved state flag and
+ * the real files. Mirrors listCavemanArtifacts.
+ */
+export async function listGraphModeArtifacts(projectRoot: string): Promise<string[]> {
+  const present: string[] = [];
+
+  for (const rel of [GRAPHMODE_KIRO_STEERING_REL, GRAPHMODE_CURSOR_RULE_REL, GRAPHMODE_WINDSURF_RULE_REL]) {
+    if (await pathExists(join(projectRoot, rel))) {
+      present.push(rel.replace(/\\/g, '/'));
+    }
+  }
+
+  for (const rel of [...CREATE_MEMORY_FILES, ...FOLD_ONLY_FILES]) {
+    const full = join(projectRoot, rel);
+    if (!(await pathExists(full))) continue;
+    try {
+      const content = await readFile(full, 'utf-8');
+      if (content.includes(GRAPHMODE_BEGIN_MARK)) present.push(rel.replace(/\\/g, '/'));
+    } catch {
+      // unreadable — skip
+    }
+  }
+
+  return present;
+}
