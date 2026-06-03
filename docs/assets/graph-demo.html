@@ -192,8 +192,8 @@
       },
       interaction: {
         hover: false,
-        dragView: true,      // click/tap-hold on empty space pans the whole map
-        dragNodes: true,     // drag an individual node to reposition it
+        dragView: true,      // tap-hold anywhere + drag pans the whole map in X/Y (like dragging an image)
+        dragNodes: false,    // dragging never grabs a single node — the gesture always moves the map
         zoomView: true,
         navigationButtons: true,
         keyboard: { enabled: true, bindToWindow: false },
@@ -204,17 +204,28 @@
     let physicsEnabled = true;
     const DIM_OPACITY = 0.15;
 
+    // Once the force-atlas layout settles, freeze physics so the map behaves like
+    // a static image: nodes stop drifting and tap-hold-drag just pans the canvas.
+    network.once('stabilizationIterationsDone', function () {
+      network.setOptions({ physics: { enabled: false } });
+      physicsEnabled = false;
+      syncPlayPauseButton();
+    });
+
     function resetView() { network.fit({ animation: true }); }
+
+    function syncPlayPauseButton() {
+      const btn = document.getElementById('play-pause-btn');
+      if (!btn) return;
+      btn.textContent = physicsEnabled ? '⏸ Pause' : '▶ Play';
+      btn.classList.toggle('paused', !physicsEnabled);
+    }
 
     // Play/Pause: pause freezes all node movement; play resumes the simulation.
     function togglePhysics() {
       physicsEnabled = !physicsEnabled;
       network.setOptions({ physics: { enabled: physicsEnabled } });
-      const btn = document.getElementById('play-pause-btn');
-      if (btn) {
-        btn.textContent = physicsEnabled ? '⏸ Pause' : '▶ Play';
-        btn.classList.toggle('paused', !physicsEnabled);
-      }
+      syncPlayPauseButton();
     }
 
     // Fully show nodes where keep(node) is true; dim the rest.

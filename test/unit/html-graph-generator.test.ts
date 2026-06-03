@@ -55,10 +55,12 @@ describe('generateHTMLGraph (vis-network 2D)', () => {
     expect(html).toContain('hover: false');
   });
 
-  it('enables map panning and node dragging', async () => {
+  it('enables free map panning (drag the canvas like an image) and disables node-drag', async () => {
     const html = await render();
     expect(html).toContain('dragView: true');
-    expect(html).toContain('dragNodes: true');
+    expect(html).toContain('dragNodes: false');
+    // Layout freezes once settled so the map stays still while you pan it.
+    expect(html).toContain("network.once('stabilizationIterationsDone'");
   });
 
   it('has search and view controls including a Play/Pause toggle', async () => {
