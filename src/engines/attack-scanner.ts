@@ -459,6 +459,37 @@ const COVERAGE = [
   'Service Bound to All Interfaces',
 ];
 
+/** File extensions the attack scanner inspects. Docs/markdown/text are excluded
+ * so prose and example snippets in README/ROADMAP never produce findings. */
+const SCANNABLE_EXT = new Set([
+  'js', 'jsx', 'mjs', 'cjs', 'ts', 'tsx', 'mts', 'cts',
+  'py', 'pyw', 'go', 'java', 'rb', 'php',
+]);
+
+function isScannableFile(file: string): boolean {
+  const ext = file.split('.').pop()?.toLowerCase() ?? '';
+  return SCANNABLE_EXT.has(ext);
+}
+
+/**
+ * True when a line is a comment or a security-rule *definition* rather than real
+ * executable code. This stops the scanner from flagging its own detector source
+ * (regex/message/recommendation literals) and code comments as vulnerabilities.
+ */
+function isNonExecutableLine(line: string): boolean {
+  const t = line.trim();
+  if (t.length === 0) return true;
+  // Comment lines (JS/TS, Python/Ruby/shell, block-comment continuations).
+  if (t.startsWith('//') || t.startsWith('#') || t.startsWith('*') || t.startsWith('/*') || t.startsWith('<!--')) {
+    return true;
+  }
+  // Security-rule metadata lines (the scanners' own pattern/message tables).
+  if (/^(?:regex|pattern|message|recommendation|suggestedFix|name|detectorCode|attackType|category|severity|mitigatedBy)\s*:/.test(t)) {
+    return true;
+  }
+  return false;
+}
+
 export async function scanAttacks(
   projectRoot: string,
   files: string[],
@@ -468,6 +499,8 @@ export async function scanAttacks(
 
   for (const file of files) {
     if (file.match(/\.(test|spec)\./)) continue;
+    // Only scan real code files — never docs, markdown, or plain text.
+    if (!isScannableFile(file)) continue;
 
     let content: string;
     try {
@@ -491,6 +524,13 @@ export async function scanAttacks(
       while ((match = regex.exec(content)) !== null) {
         const lineNumber = content.substring(0, match.index).split('\n').length;
         const lineContent = lines[lineNumber - 1] ?? '';
+
+        // Skip matches on comment lines and rule-definition/metadata lines.
+        if (isNonExecutableLine(lineContent)) {
+          if (!regex.global) break;
+          continue;
+        }
+
         const contentHash = hashString(`${file}:${detector.detectorCode}:${lineNumber}`).substring(0, 8);
 
         findings.push({

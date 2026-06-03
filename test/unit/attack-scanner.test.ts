@@ -216,4 +216,39 @@ describe('Attack Scanner', () => {
     expect(result.coverage.length).toBeGreaterThanOrEqual(30);
     await rm(dir, { recursive: true, force: true });
   });
+
+  it('does NOT scan documentation/markdown files (no false positives in README/ROADMAP)', async () => {
+    const dir = await setup({
+      'README.md': 'Use crypto.randomBytes instead of Math.random() for tokens.\nExample: eval(userInput) is dangerous.',
+      'ROADMAP.md': '- add login/authenticate brute-force protection',
+    });
+    const config = await loadConfig(dir);
+    const result = await scanAttacks(dir, ['README.md', 'ROADMAP.md'], config);
+    expect(result.findings.length).toBe(0);
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it('does NOT flag comment lines or rule-definition metadata as vulnerabilities', async () => {
+    const dir = await setup({
+      'src/rules.ts': [
+        '// eval(x) is dangerous — detector for arbitrary code execution',
+        'const rule = {',
+        "  regex: /\\beval\\s*\\(/,",
+        "  message: 'Use of eval() allows arbitrary code execution',",
+        '};',
+      ].join('\n'),
+    });
+    const config = await loadConfig(dir);
+    const result = await scanAttacks(dir, ['src/rules.ts'], config);
+    expect(result.findings.some((f) => f.attackType === 'Arbitrary Code Execution')).toBe(false);
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it('still flags a real eval call in executable code', async () => {
+    const dir = await setup({ 'src/run.ts': 'function go(s) { return eval(s); }' });
+    const config = await loadConfig(dir);
+    const result = await scanAttacks(dir, ['src/run.ts'], config);
+    expect(result.findings.some((f) => f.attackType === 'Arbitrary Code Execution')).toBe(true);
+    await rm(dir, { recursive: true, force: true });
+  });
 });

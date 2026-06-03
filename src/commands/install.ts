@@ -100,7 +100,7 @@ VibeGuard is installed in this project. Type \`/vibeguard\` in chat to use it.
 #[[file:.vibeguard/context-package.md]]
 `;
 
-const SUPPORTED_PLATFORMS = ['kiro', 'cursor', 'claude', 'copilot', 'gemini', 'aider', 'vscode', 'codex'] as const;
+const SUPPORTED_PLATFORMS = ['kiro', 'cursor', 'claude', 'copilot', 'gemini', 'aider', 'vscode', 'codex', 'antigravity'] as const;
 type SupportedPlatform = (typeof SUPPORTED_PLATFORMS)[number];
 
 function normalizePlatform(platform: string): SupportedPlatform {
@@ -238,6 +238,9 @@ export async function runInstall(ctx: CommandContext, opts: { platform: string; 
         break;
       case 'codex':
         await installCodex(projectRoot);
+        break;
+      case 'antigravity':
+        await installAntigravity(projectRoot);
         break;
     }
   });
@@ -706,6 +709,56 @@ When working on this codebase, use VibeGuard (a local CLI) for context selection
   process.stdout.write(output.join('\n') + '\n');
 }
 
+// ─── Google Antigravity IDE (AGENTS.md + MCP) ────────────────────────────────
+async function installAntigravity(projectRoot: string): Promise<void> {
+  // Antigravity reads AGENTS.md (project root) for rules — reuse the same
+  // create-or-fold section used for Codex, then add a project MCP config.
+  const agentsPath = join(projectRoot, 'AGENTS.md');
+  const section = `## VibeGuard — Intelligent Context & Security
+
+When working on this codebase, use VibeGuard (a local CLI) for context selection and security.
+
+- Before multi-file changes or architecture questions: \`npx vibeguard pack "<task>" --json\`,
+  then read ONLY the 5-15 listed files. Never read the whole project blindly.
+- Security: \`npx vibeguard audit --json\` (deps, taint, misconfig, secrets, attacks → 0-100 score),
+  \`npx vibeguard attack --json\`, \`npx vibeguard --scan\`.
+- Graph Q&A (zero tokens): \`npx vibeguard query "<question>" --json\`, \`explain\`, \`affected\`.
+- Live MCP tools are configured in \`.antigravity/mcp.json\`.
+`;
+
+  let existing = '';
+  try {
+    existing = await readFile(agentsPath, 'utf-8');
+  } catch {
+    // No AGENTS.md yet.
+  }
+
+  let agentsAction: string;
+  if (existing.includes('## VibeGuard')) {
+    agentsAction = 'AGENTS.md already contains a VibeGuard section';
+  } else if (existing.trim().length > 0) {
+    await writeFile(agentsPath, existing.trimEnd() + '\n\n' + section, 'utf-8');
+    agentsAction = 'Added VibeGuard section to AGENTS.md';
+  } else {
+    await writeFile(agentsPath, `# Agent Instructions\n\n${section}`, 'utf-8');
+    agentsAction = 'Created AGENTS.md';
+  }
+
+  const mcpResult = await writeMcpConfig(projectRoot, join('.antigravity', 'mcp.json'));
+
+  const output: string[] = [];
+  output.push('');
+  output.push(header('VibeGuard — Antigravity Install'));
+  output.push('');
+  output.push(`  ${statusIcon('success')} ${brand.success(agentsAction)}`);
+  output.push(`  ${statusIcon('success')} ${brand.success(mcpResult.action)} ${brand.muted(mcpResult.path)}`);
+  output.push('');
+  output.push(`  ${brand.primary.bold('Done!')} VibeGuard is now integrated with Google Antigravity.`);
+  output.push(`  ${brand.muted('AGENTS.md gives rules; the MCP server gives live graph/security tools.')}`);
+  output.push('');
+  process.stdout.write(output.join('\n') + '\n');
+}
+
 export async function runUninstall(ctx: CommandContext, opts: { platform: string }): Promise<void> {
   const { projectRoot } = ctx;
   const platform = normalizePlatform(opts.platform);
@@ -735,6 +788,9 @@ export async function runUninstall(ctx: CommandContext, opts: { platform: string
         break;
       case 'codex':
         await uninstallCodex(projectRoot);
+        break;
+      case 'antigravity':
+        await uninstallAntigravity(projectRoot);
         break;
     }
   });
@@ -1000,6 +1056,45 @@ async function uninstallCodex(projectRoot: string): Promise<void> {
 
   output.push('');
   output.push(`  ${brand.muted('VibeGuard uninstalled from Codex/AGENTS.md. .vibeguard/ data preserved.')}`);
+  output.push('');
+  process.stdout.write(output.join('\n') + '\n');
+}
+
+async function uninstallAntigravity(projectRoot: string): Promise<void> {
+  const output: string[] = [];
+  output.push('');
+  output.push(header('VibeGuard Uninstall — Antigravity'));
+  output.push('');
+
+  // Strip our section from AGENTS.md (remove the file if it held only that).
+  const agentsPath = join(projectRoot, 'AGENTS.md');
+  try {
+    const content = await readFile(agentsPath, 'utf-8');
+    const sectionStart = content.indexOf('## VibeGuard');
+    if (sectionStart === -1) {
+      output.push(`  ${statusIcon('info')} ${brand.muted('No VibeGuard section found in AGENTS.md')}`);
+    } else {
+      const afterSection = content.slice(sectionStart + 1);
+      const nextHeading = afterSection.indexOf('\n## ');
+      const cleaned = nextHeading === -1
+        ? content.slice(0, sectionStart).trimEnd() + '\n'
+        : content.slice(0, sectionStart) + afterSection.slice(nextHeading + 1);
+      await writeFile(agentsPath, cleaned, 'utf-8');
+      output.push(`  ${statusIcon('success')} ${brand.success('Removed VibeGuard section from')} ${brand.muted('AGENTS.md')}`);
+    }
+  } catch {
+    output.push(`  ${statusIcon('info')} ${brand.muted('AGENTS.md not found (nothing to remove)')}`);
+  }
+
+  const mcpResult = await removeMcpConfig(projectRoot, join('.antigravity', 'mcp.json'));
+  if (mcpResult.removed) {
+    output.push(`  ${statusIcon('success')} ${brand.success('Removed vibeguard server from')} ${brand.muted(mcpResult.path)}`);
+  } else {
+    output.push(`  ${statusIcon('info')} ${brand.muted('No vibeguard MCP entry found (already removed)')}`);
+  }
+
+  output.push('');
+  output.push(`  ${brand.muted('VibeGuard uninstalled from Antigravity. .vibeguard/ data preserved.')}`);
   output.push('');
   process.stdout.write(output.join('\n') + '\n');
 }

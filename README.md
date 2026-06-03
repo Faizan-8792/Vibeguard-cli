@@ -47,8 +47,6 @@
 
 <p align="center"><em>The interactive menu — pick a tool, get an answer. (Run <code>npx vibeguard --run</code> to see it live.)</em></p>
 
-> **Note:** drop your own terminal screenshot at `docs/assets/cli-demo.png` to replace this image.
-
 Prefer flags? Every action also has a one-line shortcut:
 
 ```bash

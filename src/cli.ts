@@ -384,6 +384,20 @@ function setupProgram(): Command {
       else throw new VibeguardError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: vibeguard codex install | uninstall`);
     });
 
+  // antigravity command (Google Antigravity IDE)
+  program
+    .command('antigravity')
+    .description('Install/uninstall VibeGuard for Google Antigravity IDE')
+    .argument('<action>', 'Action: install, uninstall')
+    .action(async (action) => {
+      const globalOpts = program.opts() as GlobalOptions;
+      const ctx = await createContext(globalOpts, 'install');
+      const { runInstall, runUninstall } = await import('./commands/install.js');
+      if (action === 'install') await runInstall(ctx, { platform: 'antigravity' });
+      else if (action === 'uninstall') await runUninstall(ctx, { platform: 'antigravity' });
+      else throw new VibeguardError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: vibeguard antigravity install | uninstall`);
+    });
+
   // install command
   program
     .command('install')
