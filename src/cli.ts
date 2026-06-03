@@ -147,6 +147,17 @@ function setupProgram(): Command {
       process.stdout.write(quickStart() + '\n');
     });
 
+  // run command — explicit subcommand alias for `--run` (launch interactive mode)
+  program
+    .command('run')
+    .description('Launch interactive mode (same as --run)')
+    .action(async () => {
+      const globalOpts = program.opts() as GlobalOptions;
+      const ctx = await createContext(globalOpts, 'interactive');
+      const { runInteractive } = await import('./commands/interactive.js');
+      await runInteractive(ctx);
+    });
+
   // init command
   program
     .command('init')
