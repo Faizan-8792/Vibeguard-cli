@@ -13,7 +13,7 @@
     "node": ">=18"
   },
   "bin": {
-    "vibeguard": "./dist/cli.js"
+    "vibeguard": "dist/cli.js"
   },
   "publishConfig": {
     "access": "public"
