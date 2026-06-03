@@ -75,7 +75,6 @@ export async function runInteractive(ctx: CommandContext): Promise<void> {
         { name: 'Security Scan          — Find secrets & vulnerabilities', value: 'security' },
         { name: 'Security Audit         — Deps (CVE), taint, misconfig + SBOM', value: 'audit' },
         { name: 'Health Check           — Project health score', value: 'health' },
-        { name: 'Dependency Graph       — Map file relationships', value: 'map' },
         { name: 'Dead Code Detection    — Find unused files & exports', value: 'dead' },
         { name: 'Context Package        — Generate AI context', value: 'pack' },
         { name: 'Trash Manager          — View soft-deleted files', value: 'trash' },
@@ -109,9 +108,6 @@ export async function runInteractive(ctx: CommandContext): Promise<void> {
           break;
         case 'health':
           await runHealthInteractive(ctx);
-          break;
-        case 'map':
-          await runMapInteractive(ctx);
           break;
         case 'dead':
           await runDeadInteractive(ctx);
@@ -240,11 +236,70 @@ async function runGraphModeInteractive(ctx: CommandContext): Promise<void> {
     return;
   }
 
-  // OFF → enable: write rules + build graph so the assistant has data.
+  // OFF → enable: write rules, then let the user choose HOW to build the map.
   const { written } = await enableGraphMode(ctx.projectRoot);
-  process.stdout.write(`\n  ${statusIcon('success')} ${brand.success('GraphMode: ON')} ${brand.muted(`(rules written to ${written.length} file(s))`)}\n`);
-  process.stdout.write(`  ${brand.muted('Building graph data...')}\n\n`);
-  await runMapInteractive(ctx);
+  process.stdout.write(`\n  ${statusIcon('success')} ${brand.success('GraphMode: ON')} ${brand.muted(`(rules written to ${written.length} file(s))`)}\n\n`);
+  await chooseMapSource(ctx);
+}
+
+/**
+ * Map-source picker. "Copy prompt" is the recommended, most accurate path (a
+ * capable coding agent with full repo access builds the exact graph.json), so
+ * it sits at the top. LLM generation is a one-click alternative; offline is the
+ * always-available local fallback.
+ */
+async function chooseMapSource(ctx: CommandContext): Promise<void> {
+  const { resolveFiles } = await import('../utils/glob-resolver.js');
+
+  const choice = await select<string>({
+    message: brand.primary.bold('How should the dependency map be built?'),
+    choices: [
+      { name: `Copy prompt for creating map  ${brand.success('(recommended — most accurate)')}`, value: 'copy' },
+      { name: 'Generate map using LLM        — uses your configured AI key', value: 'llm' },
+      { name: 'Create offline map            — local, no AI, instant', value: 'offline' },
+      { name: brand.muted('↩   Skip for now'), value: 'skip' },
+    ],
+  });
+
+  if (choice === 'skip') return;
+
+  if (choice === 'offline') {
+    await runMapInteractive(ctx);
+    return;
+  }
+
+  const files = await resolveFiles(ctx.projectRoot, ctx.config.effectiveInclude, ctx.config.effectiveSkipSet);
+
+  if (choice === 'copy') {
+    const { buildMapPrompt } = await import('../engines/map-prompt.js');
+    const prompt = buildMapPrompt(files);
+    await copyToClipboard(prompt, 'Map-building prompt copied to clipboard!');
+    process.stdout.write(`\n  ${brand.muted('Paste it into your coding agent (with repo access). It will write')}\n`);
+    process.stdout.write(`  ${brand.secondary('.vibeguard/graph.json')}${brand.muted(', then run')} ${brand.info('vibeguard graph')} ${brand.muted('to view it.')}\n`);
+    return;
+  }
+
+  if (choice === 'llm') {
+    const { CredentialsStore } = await import('../storage/credentials-store.js');
+    const creds = await new CredentialsStore(ctx.projectRoot).resolve();
+    if (!creds?.apiKey) {
+      process.stdout.write(`\n  ${statusIcon('warning')} ${brand.warning('No LLM key configured.')} ${brand.muted('Run "Configure LLM" first, or use Copy prompt / offline.')}\n`);
+      return;
+    }
+    const { generateMapViaLLM } = await import('../engines/map-prompt.js');
+    ctx.logger.startSpinner(`Generating map via ${creds.provider} (${creds.model})...`);
+    try {
+      const result = await generateMapViaLLM(ctx.projectRoot, files, creds);
+      ctx.logger.stopSpinner(true);
+      process.stdout.write(`\n  ${statusIcon('success')} ${brand.success('Map generated via LLM:')} ${brand.muted(`${result.nodes} files, ${result.edges} edges`)}\n`);
+      process.stdout.write(`  ${brand.muted('View it:')} ${brand.info('vibeguard graph')}\n`);
+    } catch (err) {
+      ctx.logger.stopSpinner(false);
+      process.stdout.write(`\n  ${statusIcon('error')} ${brand.danger(err instanceof Error ? err.message : 'LLM map generation failed')}\n`);
+      process.stdout.write(`  ${brand.muted('Falling back to offline map...')}\n\n`);
+      await runMapInteractive(ctx);
+    }
+  }
 }
 
 async function runSecurityInteractive(ctx: CommandContext): Promise<void> {
