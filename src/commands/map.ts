@@ -52,7 +52,7 @@ export async function runMap(ctx: CommandContext): Promise<void> {
   } else {
     const output: string[] = [];
 
-    output.push(header('Dependency Graph', '🗺️'));
+    output.push(header('Dependency Graph'));
     output.push('');
     output.push(keyValue('Nodes', brand.info.bold(String(result.summary.nodes))));
     output.push(keyValue('Edges', brand.info.bold(String(result.summary.edges))));

@@ -34,7 +34,7 @@ export interface MisconfigScanResult {
 
 export const MISCONFIG_SCHEMA_VERSION = '1.0.0';
 
-type FileKind = 'dockerfile' | 'env' | 'ci' | 'tsconfig' | 'other';
+type FileKind = 'dockerfile' | 'env' | 'ci' | 'tsconfig' | 'sshd' | 'nginx' | 'mysql' | 'other';
 
 interface MisconfigRule {
   code: string;
@@ -152,6 +152,99 @@ const RULES: MisconfigRule[] = [
     message: 'TypeScript strict mode disabled — weaker type-safety guarantees',
     recommendation: 'Enable "strict": true to catch more bugs at compile time',
   },
+  // ─── SSH server hardening (sshd_config) — dev-sec/ssh-baseline inspired ──
+  {
+    code: 'SSH-001',
+    kind: 'sshd',
+    category: 'hardening',
+    severity: 'critical',
+    regex: /^\s*PermitRootLogin\s+(?:yes|prohibit-password)\b/im,
+    message: 'SSH permits root login',
+    recommendation: 'Set "PermitRootLogin no" and use a sudo-enabled non-root user',
+  },
+  {
+    code: 'SSH-002',
+    kind: 'sshd',
+    category: 'hardening',
+    severity: 'high',
+    regex: /^\s*PasswordAuthentication\s+yes\b/im,
+    message: 'SSH password authentication enabled — brute-force exposure',
+    recommendation: 'Set "PasswordAuthentication no" and use key-based auth',
+  },
+  {
+    code: 'SSH-003',
+    kind: 'sshd',
+    category: 'hardening',
+    severity: 'high',
+    regex: /^\s*PermitEmptyPasswords\s+yes\b/im,
+    message: 'SSH allows empty passwords',
+    recommendation: 'Set "PermitEmptyPasswords no"',
+  },
+  {
+    code: 'SSH-004',
+    kind: 'sshd',
+    category: 'hardening',
+    severity: 'medium',
+    regex: /^\s*X11Forwarding\s+yes\b/im,
+    message: 'SSH X11 forwarding enabled — widens attack surface',
+    recommendation: 'Set "X11Forwarding no" unless explicitly required',
+  },
+  {
+    code: 'SSH-005',
+    kind: 'sshd',
+    category: 'hardening',
+    severity: 'medium',
+    regex: /^\s*Protocol\s+1\b/im,
+    message: 'SSH protocol 1 enabled — cryptographically broken',
+    recommendation: 'Use protocol 2 only (remove the Protocol 1 directive)',
+  },
+  // ─── nginx hardening — dev-sec/nginx-baseline inspired ──────────────────
+  {
+    code: 'NGINX-001',
+    kind: 'nginx',
+    category: 'hardening',
+    severity: 'medium',
+    regex: /^\s*server_tokens\s+on\s*;/im,
+    message: 'nginx server_tokens on — leaks version in responses/errors',
+    recommendation: 'Set "server_tokens off;" to hide the nginx version',
+  },
+  {
+    code: 'NGINX-002',
+    kind: 'nginx',
+    category: 'transport',
+    severity: 'high',
+    regex: /ssl_protocols\s+[^;]*(?:SSLv2|SSLv3|TLSv1|TLSv1\.1)\b/i,
+    message: 'nginx enables a weak TLS/SSL protocol (SSLv2/3 or TLS 1.0/1.1)',
+    recommendation: 'Restrict to "ssl_protocols TLSv1.2 TLSv1.3;"',
+  },
+  // ─── MySQL / database config hardening ──────────────────────────────────
+  {
+    code: 'MYSQL-001',
+    kind: 'mysql',
+    category: 'hardening',
+    severity: 'high',
+    regex: /^\s*skip[-_]grant[-_]tables\b/im,
+    message: 'MySQL skip-grant-tables set — disables all authentication',
+    recommendation: 'Remove skip-grant-tables; never run a database without privilege checks',
+  },
+  {
+    code: 'MYSQL-002',
+    kind: 'mysql',
+    category: 'hardening',
+    severity: 'medium',
+    regex: /^\s*local[-_]infile\s*=\s*1\b/im,
+    message: 'MySQL local-infile enabled — allows reading local files via LOAD DATA',
+    recommendation: 'Set "local-infile=0" unless explicitly needed',
+  },
+  {
+    code: 'MYSQL-003',
+    kind: 'mysql',
+    category: 'transport',
+    severity: 'medium',
+    regex: /^\s*skip[-_]ssl\b/im,
+    message: 'MySQL skip-ssl set — connections are unencrypted',
+    recommendation: 'Remove skip-ssl and require TLS for client connections',
+  },
 ];
 
 /** Classify a file by name so we apply only relevant rules. */
@@ -162,6 +255,11 @@ export function classifyFile(file: string): FileKind {
   }
   if (name === '.env' || name.startsWith('.env.')) return 'env';
   if (name === 'tsconfig.json' || /^tsconfig\..*\.json$/.test(name)) return 'tsconfig';
+  if (name === 'sshd_config' || name === 'ssh_config') return 'sshd';
+  if (name === 'my.cnf' || name === 'mysqld.cnf' || name === 'mysql.cnf') return 'mysql';
+  if (name === 'nginx.conf' || (name.endsWith('.conf') && (file.includes('nginx') || file.includes('sites-available') || file.includes('sites-enabled')))) {
+    return 'nginx';
+  }
   if (/\.ya?ml$/.test(name) && (file.includes('.github/workflows') || file.includes('.gitlab') || name.includes('ci'))) {
     return 'ci';
   }
@@ -169,7 +267,10 @@ export function classifyFile(file: string): FileKind {
 }
 
 /** Well-known config files to always check, even if outside the resolved set. */
-const ALWAYS_CHECK = ['Dockerfile', '.env', '.env.local', '.env.production', 'tsconfig.json'];
+const ALWAYS_CHECK = [
+  'Dockerfile', '.env', '.env.local', '.env.production', 'tsconfig.json',
+  'sshd_config', 'nginx.conf', 'my.cnf',
+];
 
 export async function scanMisconfig(projectRoot: string, files: string[]): Promise<MisconfigScanResult> {
   const findings: MisconfigFinding[] = [];

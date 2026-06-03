@@ -202,7 +202,7 @@ function listProviders(jsonMode: boolean): void {
   }
 
   const out: string[] = [];
-  out.push(header('Supported LLM Providers', '🌐'));
+  out.push(header('Supported LLM Providers'));
   out.push('');
   for (const p of VALID_PROVIDERS) {
     const d = PROVIDER_DEFAULTS[p];

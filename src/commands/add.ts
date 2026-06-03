@@ -108,7 +108,7 @@ export async function runAdd(ctx: CommandContext, opts: AddCommandOptions): Prom
     });
   } else {
     const output: string[] = [];
-    output.push(header('Add Document', '📄'));
+    output.push(header('Add Document'));
     output.push('');
     output.push(keyValue('File', brand.secondary(relPath)));
     output.push(keyValue('Title', brand.info(extraction.title)));

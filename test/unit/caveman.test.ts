@@ -170,11 +170,22 @@ describe('caveman command', () => {
     expect(claude).not.toContain('vibeguard-caveman:begin');
   });
 
-  it('does not create agent files that were not already present', async () => {
+  it('creates the canonical agent rule files so Caveman works in every IDE', async () => {
     const ctx = await makeCtx();
     await runCaveman(ctx, { action: 'on', level: 'full' });
-    // No CLAUDE.md existed → none should be created.
+    // Per-IDE rule files are always created (no prior install needed).
+    expect(await exists(join(testDir, '.kiro', 'steering', 'vibeguard-caveman.md'))).toBe(true);
+    expect(await exists(join(testDir, '.cursor', 'rules', 'vibeguard-caveman.mdc'))).toBe(true);
+    expect(await exists(join(testDir, '.windsurf', 'rules', 'vibeguard-caveman.md'))).toBe(true);
+    // Cross-tool memory files are created too.
+    expect(await exists(join(testDir, 'CLAUDE.md'))).toBe(true);
+    expect(await exists(join(testDir, 'AGENTS.md'))).toBe(true);
+
+    // Turning it off removes the files VibeGuard created.
+    await runCaveman(ctx, { action: 'off' });
+    expect(await exists(join(testDir, '.kiro', 'steering', 'vibeguard-caveman.md'))).toBe(false);
     expect(await exists(join(testDir, 'CLAUDE.md'))).toBe(false);
+    expect(await exists(join(testDir, 'AGENTS.md'))).toBe(false);
   });
 });
 

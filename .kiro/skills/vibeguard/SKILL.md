@@ -1,6 +1,6 @@
 ---
 name: vibeguard
-description: Local-only static analysis, security scanning, dead code detection, and AI context packaging. Trigger with /vibeguard.
+description: Pick THIS to run VibeGuard. Graph-first context engine — auto-builds the dependency map, packs only the relevant files, then answers. Also security scan, attack scan, dead-code & health. Trigger with /vibeguard.
 ---
 # VibeGuard Skill
 
@@ -38,6 +38,18 @@ Read the content of selected files. Use this as focused context to answer the us
 ### Step 5: Show the dependency graph
 Display the connections between selected files as a visual tree showing imports and dependents.
 
+## Output Ordering (IMPORTANT)
+
+Always present results in **chronological / natural reading order — newest at the BOTTOM**:
+
+1. First: the steps you ran (map / pack) and any CLI output, oldest first.
+2. Then: the dependency graph / selected-file list.
+3. **Last (at the very bottom): your actual answer or the latest CLI result.**
+
+Never put the most recent CLI output or the final answer at the top. The user reads
+top-to-bottom, so the latest/most-relevant content must be the last thing shown. Do not
+reverse, re-order, or hoist recent output above earlier output.
+
 **Key principle**: Never read the entire project blindly. Always go through the graph first. Only the most relevant 5-15 files get read — this is 80-95% fewer tokens than blind reading.
 
 ## Known Commands
@@ -60,7 +72,8 @@ Show dead code candidates sorted by importance.
 
 ### `/vibeguard map`
 Run: `npx vibeguard map --json --cwd {projectRoot}`
-Show graph statistics.
+Rebuild the dependency graph and show graph statistics. Run this once after large
+code changes; otherwise the cached graph is reused (no tokens).
 
 ### `/vibeguard fix`
 Run: `npx vibeguard security --fix=gitignore --cwd {projectRoot}`

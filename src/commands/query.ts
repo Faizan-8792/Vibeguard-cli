@@ -39,7 +39,7 @@ export async function runQuery(ctx: CommandContext, opts: QueryCommandOptions): 
     });
   } else {
     const output: string[] = [];
-    output.push(header('Graph Query', '🔍'));
+    output.push(header('Graph Query'));
     output.push('');
     output.push(`  ${brand.muted('Q:')} ${brand.secondary(opts.question ?? '')}`);
     output.push('');
@@ -73,7 +73,7 @@ export async function runPath(ctx: CommandContext, opts: PathCommandOptions): Pr
     });
   } else {
     const output: string[] = [];
-    output.push(header('Shortest Path', '🛤️'));
+    output.push(header('Shortest Path'));
     output.push('');
     output.push(`  ${brand.muted('From:')} ${brand.secondary(opts.source)}`);
     output.push(`  ${brand.muted('To:')}   ${brand.secondary(opts.target)}`);
@@ -106,7 +106,7 @@ export async function runExplain(ctx: CommandContext, opts: ExplainCommandOption
     emitJson({ ...explanation });
   } else {
     const output: string[] = [];
-    output.push(header('Node Explanation', '📖'));
+    output.push(header('Node Explanation'));
     output.push('');
     output.push(keyValue('File', brand.secondary(explanation.file)));
     output.push(keyValue('Role', brand.info(explanation.role)));
@@ -144,7 +144,7 @@ export async function runExplain(ctx: CommandContext, opts: ExplainCommandOption
     if (explanation.edges.length > 0) {
       output.push(`  ${brand.primary.bold('Semantic edges:')}`);
       for (const edge of explanation.edges.slice(0, 8)) {
-        const tag = edge.type === 'call' ? '⚡' : edge.type === 'type-reference' ? '📐' : '📦';
+        const tag = edge.type === 'call' ? '->' : edge.type === 'type-reference' ? '::' : '>>';
         const syms = edge.symbols?.join(', ') ?? '';
         output.push(`    ${tag} ${brand.info(edge.type)} → ${edge.target} ${syms ? brand.muted(`(${syms})`) : ''} [${edge.confidence}]`);
       }
@@ -182,7 +182,7 @@ export async function runAffected(ctx: CommandContext, opts: AffectedCommandOpti
     });
   } else {
     const output: string[] = [];
-    output.push(header('Impact Analysis', '💥'));
+    output.push(header('Impact Analysis'));
     output.push('');
     output.push(keyValue('If you change', brand.secondary(result.seed)));
     output.push(keyValue('Affected nodes', brand.warning.bold(String(result.affected.length))));
@@ -209,8 +209,8 @@ export async function runAffected(ctx: CommandContext, opts: AffectedCommandOpti
 
 function formatImportance(importance: string): string {
   switch (importance) {
-    case 'god-node': return brand.danger.bold('🏛️ God Node');
-    case 'hub': return brand.warning.bold('⭐ Hub');
+    case 'god-node': return brand.danger.bold('God Node');
+    case 'hub': return brand.warning.bold('Hub');
     case 'standard': return brand.info('Standard');
     case 'leaf': return brand.muted('🍃 Leaf');
     default: return brand.muted(importance);

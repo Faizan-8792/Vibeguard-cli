@@ -233,6 +233,192 @@ const DETECTORS: AttackDetector[] = [
     message: 'Model created/updated directly from req.body — mass assignment risk',
     recommendation: 'Whitelist allowed fields explicitly instead of passing req.body directly',
   },
+  // ─── XML External Entity (XXE) ─────────────────────────────────────────
+  {
+    attackType: 'XML External Entity (XXE)',
+    detectorCode: '120',
+    category: 'injection',
+    severity: 'high',
+    regex: /noent\s*:\s*true|resolveExternalEntities\s*\(\s*true\s*\)|external-general-entities[^)\n]*true/i,
+    message: 'XML parser set to expand external entities — XXE / file disclosure / SSRF risk',
+    recommendation: 'Disable entity expansion (noent:false) and external DTD loading in the XML parser',
+  },
+  // ─── Insecure Deserialization ──────────────────────────────────────────
+  {
+    attackType: 'Insecure Deserialization',
+    detectorCode: '121',
+    category: 'injection',
+    severity: 'critical',
+    regex: /\bunserialize\s*\(|node-serialize|\byaml\.load\s*\(|\bvm\.runIn(?:New)?Context\s*\(/,
+    mitigatedBy: /yaml\.safeLoad|DEFAULT_SAFE_SCHEMA|FAILSAFE_SCHEMA|JSON_SCHEMA/,
+    message: 'Untrusted data deserialized with an unsafe loader — remote code execution risk',
+    recommendation: 'Use safe parsers (JSON.parse, yaml.load with a safe schema); never deserialize untrusted input',
+  },
+  // ─── JWT Misuse ────────────────────────────────────────────────────────
+  {
+    attackType: 'JWT Algorithm Confusion',
+    detectorCode: '122',
+    category: 'authentication',
+    severity: 'critical',
+    regex: /algorithms?\s*:\s*\[?[^\]\n]*['"]none['"]/i,
+    message: "JWT verification allows the 'none' algorithm — signatures can be bypassed",
+    recommendation: "Pin an explicit allow-list of strong algorithms (e.g. ['RS256']); never permit 'none'",
+  },
+  {
+    attackType: 'JWT Signature Not Verified',
+    detectorCode: '123',
+    category: 'authentication',
+    severity: 'high',
+    regex: /\bjwt\.decode\s*\(/,
+    mitigatedBy: /jwt\.verify\s*\(/,
+    message: 'jwt.decode() used without jwt.verify() — token signature is never validated',
+    recommendation: 'Validate the signature with jwt.verify() and the secret/public key before trusting claims',
+  },
+  // ─── Server-Side Template Injection (SSTI) ─────────────────────────────
+  {
+    attackType: 'Server-Side Template Injection (SSTI)',
+    detectorCode: '124',
+    category: 'injection',
+    severity: 'high',
+    regex: /(?:handlebars|Handlebars|ejs|pug|nunjucks|_\.template)\s*\.?\s*(?:compile|render(?:String)?)?\s*\([^)]*(?:req\.(?:body|query|params)|request\.)/,
+    message: 'User input compiled into a server-side template — template injection / RCE risk',
+    recommendation: 'Never build templates from user input; pass user data as bound template variables only',
+  },
+  // ─── Insecure Cookies ──────────────────────────────────────────────────
+  {
+    attackType: 'Insecure Cookie Flags',
+    detectorCode: '125',
+    category: 'hardening',
+    severity: 'medium',
+    regex: /res\.cookie\s*\(/,
+    mitigatedBy: /httpOnly\s*:\s*true[\s\S]*?secure\s*:\s*true|secure\s*:\s*true[\s\S]*?httpOnly\s*:\s*true/,
+    message: 'Cookie set without both HttpOnly and Secure flags — session theft / XSS exposure',
+    recommendation: 'Set { httpOnly: true, secure: true, sameSite: "strict" } on session cookies',
+  },
+  // ─── Hardcoded Session Secret ──────────────────────────────────────────
+  {
+    attackType: 'Hardcoded Session Secret',
+    detectorCode: '126',
+    category: 'cryptography',
+    severity: 'high',
+    regex: /session\s*\(\s*\{[^}]*secret\s*:\s*['"][^'"]+['"]/,
+    mitigatedBy: /secret\s*:\s*process\.env/,
+    message: 'Session/signing secret hard-coded in source — predictable and leakable',
+    recommendation: 'Load the session secret from an environment variable, not source code',
+  },
+  // ─── HTTP Response Splitting (CRLF) ────────────────────────────────────
+  {
+    attackType: 'HTTP Response Splitting (CRLF Injection)',
+    detectorCode: '127',
+    category: 'injection',
+    severity: 'medium',
+    regex: /(?:setHeader|writeHead|res\.header|res\.set)\s*\([^)]*(?:req\.(?:query|params|body|headers)|request\.)/,
+    message: 'Response header value derived from user input — CRLF / header injection risk',
+    recommendation: 'Strip CR/LF from user-controlled header values, or keep user input out of headers',
+  },
+  // ─── Sensitive Data in Logs ────────────────────────────────────────────
+  {
+    attackType: 'Sensitive Data Exposure (Logging)',
+    detectorCode: '128',
+    category: 'information-disclosure',
+    severity: 'low',
+    regex: /console\.(?:log|info|debug|warn|error)\s*\([^)]*\b(?:password|passwd|secret|api[_-]?key|token|creditCard|ssn)\b/i,
+    message: 'Secret/credential value written to logs — sensitive data exposure',
+    recommendation: 'Redact secrets before logging; never log passwords, tokens, or keys',
+  },
+  // ─── Disabled TLS Verification ─────────────────────────────────────────
+  {
+    attackType: 'Disabled TLS Certificate Validation',
+    detectorCode: '129',
+    category: 'cryptography',
+    severity: 'high',
+    regex: /rejectUnauthorized\s*:\s*false|NODE_TLS_REJECT_UNAUTHORIZED\s*[:=]\s*['"]?0/,
+    message: 'TLS certificate validation disabled — man-in-the-middle risk',
+    recommendation: 'Never disable certificate validation; trust the proper CA certificate instead',
+  },
+  // ─── Insecure File Upload ──────────────────────────────────────────────
+  {
+    attackType: 'Unrestricted File Upload',
+    detectorCode: '130',
+    category: 'access-control',
+    severity: 'medium',
+    regex: /\bmulter\s*\(/,
+    mitigatedBy: /limits\s*:|fileFilter\s*:/,
+    message: 'File upload handler without size limits or type filtering — DoS / malicious upload risk',
+    recommendation: 'Configure multer with limits (fileSize) and a fileFilter allow-list of MIME types',
+  },
+  // ─── Timing-Unsafe Secret Comparison ───────────────────────────────────
+  {
+    attackType: 'Timing-Unsafe Secret Comparison',
+    detectorCode: '131',
+    category: 'cryptography',
+    severity: 'medium',
+    regex: /\b(?:token|secret|signature|hmac|apiKey|api_key|authToken|sessionId)\b\s*(?:===|!==)\s*req\.|req\.[^\s=!]*\s*(?:===|!==)\s*\b(?:token|secret|signature|hmac|apiKey|api_key|authToken|sessionId)\b/i,
+    mitigatedBy: /timingSafeEqual/,
+    message: 'Secret/token compared with ===/!== against user input — timing-attack risk',
+    recommendation: 'Use crypto.timingSafeEqual() for constant-time comparison of secrets and tokens',
+  },
+  // ─── Stack Trace / Error Disclosure ────────────────────────────────────
+  {
+    attackType: 'Information Disclosure (Stack Trace)',
+    detectorCode: '132',
+    category: 'information-disclosure',
+    severity: 'low',
+    regex: /res\.(?:send|json|write)\s*\([^)]*(?:err|error|e)\.stack|stack\s*:\s*(?:err|error|e)\.stack/,
+    message: 'Error stack trace returned in an HTTP response — leaks internal implementation details',
+    recommendation: 'Return a generic error message to clients; log stack traces server-side only',
+  },
+  // ─── LDAP Injection ────────────────────────────────────────────────────
+  {
+    attackType: 'LDAP Injection',
+    detectorCode: '133',
+    category: 'injection',
+    severity: 'high',
+    regex: /(?:search|bind|findOne)\s*\(\s*[`'"][^`'"]*(?:\(|cn=|uid=|ou=)[^`'"]*(?:\$\{|['"]\s*\+)/i,
+    message: 'LDAP filter built from interpolated/concatenated input — LDAP injection risk',
+    recommendation: 'Escape LDAP special chars (RFC 4515) or use a parameterized LDAP query builder',
+  },
+  // ─── ReDoS — user input compiled into a RegExp ─────────────────────────
+  {
+    attackType: 'Regular Expression DoS (ReDoS)',
+    detectorCode: '134',
+    category: 'availability',
+    severity: 'medium',
+    regex: /new\s+RegExp\s*\(\s*(?:req\.(?:body|query|params)|request\.|[^)]*\binput\b)/,
+    message: 'RegExp constructed from user input — a malicious pattern can hang the event loop (ReDoS)',
+    recommendation: 'Never build regexes from user input; validate against a fixed pattern or use a safe matcher with a timeout',
+  },
+  // ─── CORS reflecting the request origin ────────────────────────────────
+  {
+    attackType: 'CORS Origin Reflection',
+    detectorCode: '135',
+    category: 'access-control',
+    severity: 'high',
+    regex: /Access-Control-Allow-Origin['"]?\s*[,:]\s*(?:req\.headers\.origin|request\.headers\.origin|origin)\b/i,
+    mitigatedBy: /allowlist|allowedOrigins|whitelist|includes\(\s*origin/i,
+    message: 'CORS echoes the request Origin back without an allowlist — defeats the same-origin policy',
+    recommendation: 'Validate Origin against an explicit allowlist before reflecting it',
+  },
+  // ─── postMessage to wildcard target ────────────────────────────────────
+  {
+    attackType: 'Insecure postMessage Target',
+    detectorCode: '136',
+    category: 'access-control',
+    severity: 'medium',
+    regex: /\.postMessage\s*\([^,]+,\s*['"]\*['"]\s*\)/,
+    message: "window.postMessage called with target origin '*' — any window can read the message",
+    recommendation: 'Specify an explicit target origin instead of "*" in postMessage',
+  },
+  // ─── Server bound to all interfaces ────────────────────────────────────
+  {
+    attackType: 'Service Bound to All Interfaces',
+    detectorCode: '137',
+    category: 'hardening',
+    severity: 'low',
+    regex: /\.listen\s*\([^)]*['"]0\.0\.0\.0['"]/,
+    message: 'Service explicitly bound to 0.0.0.0 — reachable on every network interface',
+    recommendation: 'Bind to 127.0.0.1 (or a specific interface) unless external exposure is intended',
+  },
 ];
 
 const COVERAGE = [
@@ -254,6 +440,23 @@ const COVERAGE = [
   'Prototype Pollution',
   'Arbitrary Code Execution (eval)',
   'Mass Assignment',
+  'XML External Entity (XXE)',
+  'Insecure Deserialization',
+  'JWT Algorithm Confusion / Unverified Signature',
+  'Server-Side Template Injection (SSTI)',
+  'Insecure Cookie Flags',
+  'Hardcoded Session Secret',
+  'HTTP Response Splitting (CRLF Injection)',
+  'Sensitive Data Exposure (Logging)',
+  'Disabled TLS Certificate Validation',
+  'Unrestricted File Upload',
+  'Timing-Unsafe Secret Comparison',
+  'Information Disclosure (Stack Trace)',
+  'LDAP Injection',
+  'Regular Expression DoS (ReDoS)',
+  'CORS Origin Reflection',
+  'Insecure postMessage Target',
+  'Service Bound to All Interfaces',
 ];
 
 export async function scanAttacks(

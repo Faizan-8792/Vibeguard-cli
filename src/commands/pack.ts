@@ -119,7 +119,7 @@ export async function runPack(ctx: CommandContext, opts: PackCommandOptions): Pr
   } else {
     const output: string[] = [];
 
-    output.push(header('Context Package', '📦'));
+    output.push(header('Context Package'));
     output.push('');
     output.push(keyValue('Task', brand.secondary(`"${task.slice(0, 60)}${task.length > 60 ? '...' : ''}"`)));
     output.push(keyValue('Selected Files', brand.info.bold(String(selectionResult.selectedFiles.length))));

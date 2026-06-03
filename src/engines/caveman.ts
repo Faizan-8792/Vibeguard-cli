@@ -1,5 +1,5 @@
 import { mkdir, writeFile, readFile, rm, access } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { FileStoreImpl } from '../storage/file-store.js';
 
 /**
@@ -7,8 +7,10 @@ import { FileStoreImpl } from '../storage/file-store.js';
  *
  * Inspired by the `caveman` skill (github.com/JuliusBrussee/caveman): make the
  * agent drop filler words and answer in terse, high-density fragments while
- * keeping 100% technical accuracy. Cuts roughly 60-75% of output tokens, which
- * also makes responses faster to read and cheaper to run.
+ * keeping 100% technical accuracy. Realistically trims ~20-45% of output tokens
+ * on prose-heavy replies (code is never compressed), which also makes responses
+ * faster to read. Savings figures here are honest prose-only estimates, not a
+ * billing-grade guarantee — see `estimatedSavingsPct`.
  *
  * VibeGuard wires this in natively: enabling caveman writes an always-on
  * steering/rule file for the AI assistant so EVERY chat answers caveman-style
@@ -77,28 +79,34 @@ interface CavemanLevelMeta {
   savingsPct: number;
 }
 
+// Savings are honest prose-only estimates (code is never compressed). Measured
+// against representative replies; real numbers vary with how chatty the answer
+// is. These drive the CLI "Est. output savings" line — kept realistic on
+// purpose so the figure is trustworthy rather than aspirational.
 const LEVEL_META: Record<CavemanLevel, CavemanLevelMeta> = {
   lite: {
-    description: 'Drop filler & hedging, keep full sentences. Professional but tight.',
+    description: 'Drop filler & hedging, keep full sentences. Professional but tight (~20% fewer tokens on prose).',
     ruleDetail:
       '- Remove filler and hedging only. Keep articles and grammatical sentences. Professional, tight, still fluent.',
-    savingsPct: 35,
+    savingsPct: 20,
   },
   full: {
-    description: 'Drop articles, fragments OK, short synonyms. Classic caveman (~65% fewer tokens).',
+    description: 'Drop articles, fragments OK, short synonyms. Classic caveman (~30% fewer tokens on prose).',
     ruleDetail:
       '- Drop articles, use fragments, swap long phrases for short synonyms. Classic caveman density.',
-    savingsPct: 65,
+    savingsPct: 30,
   },
   ultra: {
     description:
-      'Telegraphic: abbreviate prose, arrows for causality (X → Y), one word when one word enough.',
+      'Telegraphic & minimal: answer in the fewest words possible, abbreviate prose, arrows for causality (X → Y) (~45% fewer tokens on prose).',
     ruleDetail: [
-      '- Maximum compression. Abbreviate common prose words (DB, auth, config, req, res, fn, impl).',
-      '- Strip conjunctions. Use arrows for causality (X → Y). One word when one word is enough.',
-      '- Still never abbreviate code symbols, function names, API names, or error strings.',
+      '- Maximum compression. Answer in the fewest words that stay correct — aim to cut output roughly in half.',
+      '- No preamble, no recap, no closing summary. Lead with the answer. One short fragment per idea.',
+      '- Abbreviate common prose words (DB, auth, config, req, res, fn, impl, env, repo). Strip conjunctions.',
+      '- Use arrows for causality (X → Y) and bullets over paragraphs. One word when one word is enough.',
+      '- Still never abbreviate code symbols, function names, API names, file paths, or error strings.',
     ].join('\n'),
-    savingsPct: 75,
+    savingsPct: 45,
   },
 };
 
@@ -223,12 +231,19 @@ const CLINERULES_REL = '.clinerules';
 const AGENTS_REL = 'AGENTS.md';
 
 /**
- * Shared memory files that receive a marker-fenced block — but only if they
- * already exist. We never create these (no repo litter); we only fold our
- * block into an integration the user already set up. `AGENTS.md` is the
- * emerging cross-tool standard (Cursor, Zed, Aider, others read it).
+ * Memory/instruction files that are CREATED if missing and then receive a
+ * marker-fenced caveman block. These are the canonical always-on instruction
+ * files each agent reads, so creating them is what makes Caveman Mode work in
+ * every IDE without a prior `vibeguard install`. On disable, the block is
+ * stripped; if VibeGuard created the file (nothing else in it), it is removed.
  */
-const MEMORY_FILES = [CLAUDE_REL, COPILOT_REL, GEMINI_REL, WINDSURFRULES_REL, CLINERULES_REL, AGENTS_REL];
+const CREATE_MEMORY_FILES = [CLAUDE_REL, COPILOT_REL, GEMINI_REL, AGENTS_REL];
+
+/**
+ * Legacy single-file rule formats. Only folded into when they already exist —
+ * the newer per-IDE rule files above are the primary mechanism.
+ */
+const FOLD_ONLY_FILES = [WINDSURFRULES_REL, CLINERULES_REL];
 
 async function pathExists(p: string): Promise<boolean> {
   try {
@@ -257,9 +272,16 @@ async function injectMarkerBlock(filePath: string, body: string): Promise<void> 
   const block = `${CAVEMAN_BEGIN_MARK}\n${body}\n${CAVEMAN_END_MARK}`;
   const base = removeMarkerBlock(content).trimEnd();
   const next = base.length > 0 ? `${base}\n\n${block}\n` : `${block}\n`;
+  // Ensure the parent directory exists (e.g. .github/, .gemini/) before writing.
+  await mkdir(dirname(filePath), { recursive: true });
   await writeFile(filePath, next, 'utf-8');
 }
 
+/**
+ * Strip the caveman block from a marker-folded file. If, after stripping, the
+ * file contains nothing but whitespace (i.e. VibeGuard created it), the file is
+ * deleted so disabling leaves no empty litter. Returns true if anything changed.
+ */
 async function stripMarkerBlock(filePath: string): Promise<boolean> {
   let content: string;
   try {
@@ -268,35 +290,51 @@ async function stripMarkerBlock(filePath: string): Promise<boolean> {
     return false;
   }
   if (!content.includes(CAVEMAN_BEGIN_MARK)) return false;
-  await writeFile(filePath, removeMarkerBlock(content).trimEnd() + '\n', 'utf-8');
+
+  const remainder = removeMarkerBlock(content).trim();
+  if (remainder.length === 0) {
+    // The file held only our block — remove it entirely.
+    await rm(filePath, { force: true });
+  } else {
+    await writeFile(filePath, remainder + '\n', 'utf-8');
+  }
   return true;
 }
 
 /**
- * Write the always-on Kiro steering file (canonical) and mirror the rule into
- * any other agent integration that already exists. New agent files are never
- * created — VibeGuard only updates integrations the user already installed.
- * Returns the list of repo-relative paths written.
+ * Write the always-on caveman rule into every major IDE/agent integration so
+ * the mode works everywhere without a prior `vibeguard install`. Per-IDE rule
+ * files (Kiro, Cursor, Windsurf) are CREATED unconditionally; the cross-tool
+ * memory files (CLAUDE.md, Copilot, Gemini, AGENTS.md) are created if missing
+ * and folded into via a marker block; legacy single-file formats are only
+ * folded into when they already exist. Returns repo-relative paths written.
  */
 export async function writeCavemanRules(projectRoot: string, level: CavemanLevel): Promise<string[]> {
   const written: string[] = [];
 
-  const kiroPath = join(projectRoot, CAVEMAN_KIRO_STEERING_REL);
+  // Kiro steering (canonical).
   await mkdir(join(projectRoot, '.kiro', 'steering'), { recursive: true });
-  await writeFile(kiroPath, buildKiroSteering(level), 'utf-8');
+  await writeFile(join(projectRoot, CAVEMAN_KIRO_STEERING_REL), buildKiroSteering(level), 'utf-8');
   written.push(CAVEMAN_KIRO_STEERING_REL.replace(/\\/g, '/'));
 
-  if (await pathExists(join(projectRoot, '.cursor', 'rules'))) {
-    await writeFile(join(projectRoot, CAVEMAN_CURSOR_RULE_REL), buildCursorRule(level), 'utf-8');
-    written.push(CAVEMAN_CURSOR_RULE_REL.replace(/\\/g, '/'));
+  // Cursor rule (always created so it works in a fresh Cursor project).
+  await mkdir(join(projectRoot, '.cursor', 'rules'), { recursive: true });
+  await writeFile(join(projectRoot, CAVEMAN_CURSOR_RULE_REL), buildCursorRule(level), 'utf-8');
+  written.push(CAVEMAN_CURSOR_RULE_REL.replace(/\\/g, '/'));
+
+  // Windsurf rule (always created).
+  await mkdir(join(projectRoot, '.windsurf', 'rules'), { recursive: true });
+  await writeFile(join(projectRoot, CAVEMAN_WINDSURF_RULE_REL), buildWindsurfRule(level), 'utf-8');
+  written.push(CAVEMAN_WINDSURF_RULE_REL.replace(/\\/g, '/'));
+
+  // Cross-tool memory files — create if missing, then inject the block.
+  for (const rel of CREATE_MEMORY_FILES) {
+    await injectMarkerBlock(join(projectRoot, rel), buildPlainRule(level));
+    written.push(rel.replace(/\\/g, '/'));
   }
 
-  if (await pathExists(join(projectRoot, '.windsurf', 'rules'))) {
-    await writeFile(join(projectRoot, CAVEMAN_WINDSURF_RULE_REL), buildWindsurfRule(level), 'utf-8');
-    written.push(CAVEMAN_WINDSURF_RULE_REL.replace(/\\/g, '/'));
-  }
-
-  for (const rel of MEMORY_FILES) {
+  // Legacy single-file formats — only fold into when already present.
+  for (const rel of FOLD_ONLY_FILES) {
     if (await pathExists(join(projectRoot, rel))) {
       await injectMarkerBlock(join(projectRoot, rel), buildPlainRule(level));
       written.push(rel.replace(/\\/g, '/'));
@@ -310,6 +348,7 @@ export async function writeCavemanRules(projectRoot: string, level: CavemanLevel
 export async function removeCavemanRules(projectRoot: string): Promise<string[]> {
   const removed: string[] = [];
 
+  // Per-IDE rule files: delete outright (they hold only caveman content).
   for (const rel of [CAVEMAN_KIRO_STEERING_REL, CAVEMAN_CURSOR_RULE_REL, CAVEMAN_WINDSURF_RULE_REL]) {
     const full = join(projectRoot, rel);
     if (await pathExists(full)) {
@@ -318,7 +357,8 @@ export async function removeCavemanRules(projectRoot: string): Promise<string[]>
     }
   }
 
-  for (const rel of MEMORY_FILES) {
+  // Memory files: strip our block (and delete the file if it held only that).
+  for (const rel of [...CREATE_MEMORY_FILES, ...FOLD_ONLY_FILES]) {
     const full = join(projectRoot, rel);
     if ((await pathExists(full)) && (await stripMarkerBlock(full))) {
       removed.push(rel.replace(/\\/g, '/'));

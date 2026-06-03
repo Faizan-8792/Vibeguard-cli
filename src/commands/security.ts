@@ -78,7 +78,7 @@ export async function runSecurity(ctx: CommandContext, opts: SecurityCommandOpti
   } else {
     const output: string[] = [];
 
-    output.push(header('Security Scan', '🔒'));
+    output.push(header('Security Scan'));
     output.push('');
 
     if (result.issues.length === 0) {

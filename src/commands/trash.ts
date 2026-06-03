@@ -23,7 +23,7 @@ export async function runTrash(ctx: CommandContext, opts: TrashCommandOptions): 
         emitJson({ entries });
       } else {
         const output: string[] = [];
-        output.push(header('Trash', '🗑️'));
+        output.push(header('Trash'));
         output.push('');
 
         if (entries.length === 0) {

@@ -15,6 +15,8 @@ takeinspiration/
 # Internal planning + dev scratch (not for the public repo)
 ROADMAP.md
 smoke.mjs
+cv2.txt
+*.log
 
 # Environment & secrets
 .env

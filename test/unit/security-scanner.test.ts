@@ -160,6 +160,48 @@ describe('Security Scanner', () => {
     expect(result.counts.high).toBeGreaterThan(0);
   });
 
+  // ─── New secret detectors (013-018) ─────────────────────────────────────
+
+  it('detects GitHub tokens', async () => {
+    // Built at runtime so the source file contains no contiguous token literal
+    // (keeps GitHub secret-scanning push protection happy on this test fixture).
+    const token = 'ghp_' + 'a'.repeat(36);
+    await writeFile(join(testDir, 'src', 'gh.ts'), `const t = "${token}";`, 'utf-8');
+    const config = await loadConfig(testDir);
+    const result = await scanSecurity(testDir, ['src/gh.ts'], config);
+    expect(result.issues.some((i) => i.id.startsWith('SEC-013-'))).toBe(true);
+  });
+
+  it('detects Stripe secret keys', async () => {
+    const key = 'sk_' + 'live_' + 'abcdefghijklmnopqrstuvwx';
+    await writeFile(join(testDir, 'src', 'stripe.ts'), `const k = "${key}";`, 'utf-8');
+    const config = await loadConfig(testDir);
+    const result = await scanSecurity(testDir, ['src/stripe.ts'], config);
+    expect(result.issues.some((i) => i.id.startsWith('SEC-014-'))).toBe(true);
+  });
+
+  it('detects private key blocks', async () => {
+    await writeFile(
+      join(testDir, 'src', 'key.ts'),
+      `const pem = \`-----BEGIN RSA PRIVATE KEY-----\nMIIabc\n-----END RSA PRIVATE KEY-----\`;`,
+      'utf-8'
+    );
+    const config = await loadConfig(testDir);
+    const result = await scanSecurity(testDir, ['src/key.ts'], config);
+    expect(result.issues.some((i) => i.id.startsWith('SEC-017-'))).toBe(true);
+  });
+
+  it('detects generic api key assignments', async () => {
+    await writeFile(
+      join(testDir, 'src', 'generic.ts'),
+      `const client_secret = "abc123DEF456ghi789JKL";`,
+      'utf-8'
+    );
+    const config = await loadConfig(testDir);
+    const result = await scanSecurity(testDir, ['src/generic.ts'], config);
+    expect(result.issues.some((i) => i.id.startsWith('SEC-018-'))).toBe(true);
+  });
+
   // ─── False-positive regression tests ────────────────────────────────────
 
   it('does NOT flag arbitrary 40-char strings as AWS secret keys', async () => {

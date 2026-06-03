@@ -40,19 +40,19 @@ export async function runInteractive(ctx: CommandContext): Promise<void> {
     const action = await select<string>({
       message: brand.primary.bold('What would you like to do?'),
       choices: [
-        { name: '🔒  Security Scan        — Find secrets & vulnerabilities', value: 'security' },
-        { name: '🛡️   Cyberattack Proof     — Scan for DDoS, SQLi, XSS, OTP abuse...', value: 'attack' },
-        { name: '🔬  Security Audit        — Deps (CVE), taint, misconfig + SBOM', value: 'audit' },
-        { name: '🏥  Health Check          — Project health score', value: 'health' },
-        { name: '🗺️   Dependency Graph      — Map file relationships', value: 'map' },
-        { name: '🧹  Dead Code Detection   — Find unused files & exports', value: 'dead' },
-        { name: '📦  Context Package       — Generate AI context', value: 'pack' },
-        { name: '🪨  Caveman Mode          — Save tokens & boost speed', value: 'caveman' },
-        { name: '🗑️   Trash Manager         — View soft-deleted files', value: 'trash' },
-        { name: '⚙️   Initialize Config     — Setup .vibeguard/', value: 'init' },
-        { name: '🔑  Configure LLM         — Add API key (OpenAI, Gemini, DeepSeek...)', value: 'llm' },
-        { name: '📊  Project Report        — Full project description', value: 'report' },
-        { name: brand.muted('✖   Exit'), value: 'exit' },
+        { name: 'Security Scan        — Find secrets & vulnerabilities', value: 'security' },
+        { name: 'Cyberattack Proof     — Scan for DDoS, SQLi, XSS, OTP abuse...', value: 'attack' },
+        { name: 'Security Audit        — Deps (CVE), taint, misconfig + SBOM', value: 'audit' },
+        { name: 'Health Check          — Project health score', value: 'health' },
+        { name: 'Dependency Graph      — Map file relationships', value: 'map' },
+        { name: 'Dead Code Detection   — Find unused files & exports', value: 'dead' },
+        { name: 'Context Package       — Generate AI context', value: 'pack' },
+        { name: 'Caveman Mode          — Save tokens & boost speed', value: 'caveman' },
+        { name: 'Trash Manager         — View soft-deleted files', value: 'trash' },
+        { name: 'Initialize Config     — Setup .vibeguard/', value: 'init' },
+        { name: 'Configure LLM         — Add API key (OpenAI, Gemini, DeepSeek...)', value: 'llm' },
+        { name: 'Project Report        — Full project description', value: 'report' },
+        { name: brand.muted('Exit'), value: 'exit' },
       ],
     });
 
@@ -123,7 +123,7 @@ async function runSecurityInteractive(ctx: CommandContext): Promise<void> {
   ctx.logger.stopSpinner(true);
 
   const output: string[] = [];
-  output.push(header('Security Scan Results', '🔒'));
+  output.push(header('Security Scan Results'));
   output.push('');
 
   if (result.issues.length === 0) {
@@ -162,10 +162,10 @@ async function runSecurityInteractive(ctx: CommandContext): Promise<void> {
   const action = await select<string>({
     message: brand.primary('What would you like to do?'),
     choices: [
-      { name: '🔧  Fix Now — Auto-fix .gitignore issues', value: 'fix-gitignore' },
-      { name: '🔧  Fix Now — Move secrets to .env', value: 'fix-env' },
-      { name: '📋  Copy Fix Instructions (for AI chat)', value: 'copy-instructions' },
-      { name: '↩️   Back to menu', value: 'back' },
+      { name: 'Fix Now — Auto-fix .gitignore issues', value: 'fix-gitignore' },
+      { name: 'Fix Now — Move secrets to .env', value: 'fix-env' },
+      { name: 'Copy Fix Instructions (for AI chat)', value: 'copy-instructions' },
+      { name: 'Back to menu', value: 'back' },
     ],
   });
 
@@ -189,7 +189,7 @@ async function runHealthInteractive(ctx: CommandContext): Promise<void> {
   ctx.logger.stopSpinner(true);
 
   const output: string[] = [];
-  output.push(header('Project Health Report', '🏥'));
+  output.push(header('Project Health Report'));
   output.push('');
 
   const overallColor = result.summary.projectHealth >= 80 ? 'success' : result.summary.projectHealth >= 50 ? 'warning' : 'danger';
@@ -213,19 +213,19 @@ async function runHealthInteractive(ctx: CommandContext): Promise<void> {
     const choices: Array<{ name: string; value: string }> = [];
 
     if (result.summary.security !== null && result.summary.security < 100) {
-      choices.push({ name: '🔒  Fix Security Issues', value: 'security' });
+      choices.push({ name: 'Fix Security Issues', value: 'security' });
     }
     if (result.summary.deadCode !== null && result.summary.deadCode < 100) {
-      choices.push({ name: '🧹  Fix Dead Code', value: 'dead' });
+      choices.push({ name: 'Fix Dead Code', value: 'dead' });
     }
     if (result.summary.architecture !== null && result.summary.architecture < 100) {
-      choices.push({ name: '🏗️   Fix Architecture (cycles & god-files)', value: 'architecture' });
+      choices.push({ name: 'Fix Architecture (cycles & god-files)', value: 'architecture' });
     }
     if (result.summary.contextEfficiency !== null && result.summary.contextEfficiency < 100) {
-      choices.push({ name: '🧠  Fix Context Efficiency (heavy imports)', value: 'context' });
+      choices.push({ name: 'Fix Context Efficiency (heavy imports)', value: 'context' });
     }
-    choices.push({ name: '📋  Copy Full Report (for AI chat)', value: 'copy' });
-    choices.push({ name: '↩️   Back to menu', value: 'back' });
+    choices.push({ name: 'Copy Full Report (for AI chat)', value: 'copy' });
+    choices.push({ name: 'Back to menu', value: 'back' });
 
     const action = await selectPrompt<string>({
       message: brand.primary('Improve your score:'),
@@ -265,7 +265,7 @@ async function showArchitectureFix(details: ArchitectureDetails): Promise<void> 
   const { select: selectPrompt } = await import('@inquirer/prompts');
 
   const output: string[] = [];
-  output.push(header('Architecture Issues', '🏗️'));
+  output.push(header('Architecture Issues'));
   output.push('');
 
   if (details.cyclicPairs.length === 0 && details.highFanInFiles.length === 0) {
@@ -299,8 +299,8 @@ async function showArchitectureFix(details: ArchitectureDetails): Promise<void> 
   const action = await selectPrompt<string>({
     message: brand.primary('What would you like to do?'),
     choices: [
-      { name: '📋  Copy Fix Instructions (for AI chat)', value: 'copy' },
-      { name: '↩️   Back to menu', value: 'back' },
+      { name: 'Copy Fix Instructions (for AI chat)', value: 'copy' },
+      { name: 'Back to menu', value: 'back' },
     ],
   });
 
@@ -330,7 +330,7 @@ async function showContextFix(details: ContextDetails): Promise<void> {
   const { select: selectPrompt } = await import('@inquirer/prompts');
 
   const output: string[] = [];
-  output.push(header('Context Efficiency', '🧠'));
+  output.push(header('Context Efficiency'));
   output.push('');
   output.push(keyValue('Avg imports/file', brand.info(String(details.avgImports))));
   output.push('');
@@ -355,8 +355,8 @@ async function showContextFix(details: ContextDetails): Promise<void> {
   const action = await selectPrompt<string>({
     message: brand.primary('What would you like to do?'),
     choices: [
-      { name: '📋  Copy Fix Instructions (for AI chat)', value: 'copy' },
-      { name: '↩️   Back to menu', value: 'back' },
+      { name: 'Copy Fix Instructions (for AI chat)', value: 'copy' },
+      { name: 'Back to menu', value: 'back' },
     ],
   });
 
@@ -391,7 +391,7 @@ async function runMapInteractive(ctx: CommandContext): Promise<void> {
   ctx.logger.stopSpinner(true);
 
   const output: string[] = [];
-  output.push(header('Dependency Graph', '🗺️'));
+  output.push(header('Dependency Graph'));
   output.push('');
   output.push(keyValue('Nodes', brand.info.bold(String(result.summary.nodes))));
   output.push(keyValue('Edges', brand.info.bold(String(result.summary.edges))));
@@ -433,13 +433,13 @@ async function runDeadInteractive(ctx: CommandContext): Promise<void> {
 
   // If the scanner aborted (no valid entrypoint / too many flagged), warn and stop.
   if (result.warning) {
-    process.stdout.write(`\n  ${header('Dead Code Analysis', '🧹')}\n\n`);
+    process.stdout.write(`\n  ${header('Dead Code Analysis')}\n\n`);
     process.stdout.write(`  ${statusIcon('warning')} ${brand.warning(result.warning)}\n\n`);
     return;
   }
 
   const output: string[] = [];
-  output.push(header('Dead Code Analysis', '🧹'));
+  output.push(header('Dead Code Analysis'));
   output.push('');
   output.push(summaryLine([
     { label: 'Unused Files', value: result.summary.unusedFiles, color: result.summary.unusedFiles > 0 ? 'warning' : 'success' },
@@ -465,10 +465,10 @@ async function runDeadInteractive(ctx: CommandContext): Promise<void> {
     const action = await select<string>({
       message: brand.primary('What would you like to do?'),
       choices: [
-        { name: '🗑️   Move dead files to trash (safe, reversible)', value: 'apply' },
-        { name: '👁️   Preview changes (dry-run)', value: 'dry-run' },
-        { name: '📋  Copy Fix Instructions (for AI chat)', value: 'copy' },
-        { name: '↩️   Back to menu', value: 'back' },
+        { name: 'Move dead files to trash (safe, reversible)', value: 'apply' },
+        { name: 'Preview changes (dry-run)', value: 'dry-run' },
+        { name: 'Copy Fix Instructions (for AI chat)', value: 'copy' },
+        { name: 'Back to menu', value: 'back' },
       ],
     });
 
@@ -514,7 +514,7 @@ async function runCavemanInteractive(ctx: CommandContext): Promise<void> {
   const state = await loadCavemanState(ctx.projectRoot);
 
   const output: string[] = [];
-  output.push(header('Caveman Mode', '🪨'));
+  output.push(header('Caveman Mode'));
   output.push('');
   output.push(`  ${brand.primary.bold('Why use many token when few do trick.')}`);
   output.push(`  ${brand.muted('Terse, high-signal AI replies. Full technical accuracy. Fewer tokens, faster reads.')}`);
@@ -526,10 +526,10 @@ async function runCavemanInteractive(ctx: CommandContext): Promise<void> {
   const choice = await select<string>({
     message: brand.primary.bold('Caveman action:'),
     choices: [
-      { name: `🪨  Enable — lite    ${brand.muted(`(~${estimatedSavingsPct('lite')}% · ${levelDescription('lite')})`)}`, value: 'lite' },
-      { name: `🪨  Enable — full    ${brand.muted(`(~${estimatedSavingsPct('full')}% · classic caveman)`)}`, value: 'full' },
-      { name: `🪨  Enable — ultra   ${brand.muted(`(~${estimatedSavingsPct('ultra')}% · telegraphic)`)}`, value: 'ultra' },
-      { name: '🗣️   Disable (normal mode)', value: 'off' },
+      { name: `Enable — lite    ${brand.muted(`(~${estimatedSavingsPct('lite')}% · ${levelDescription('lite')})`)}`, value: 'lite' },
+      { name: `Enable — full    ${brand.muted(`(~${estimatedSavingsPct('full')}% · classic caveman)`)}`, value: 'full' },
+      { name: `Enable — ultra   ${brand.muted(`(~${estimatedSavingsPct('ultra')}% · telegraphic)`)}`, value: 'ultra' },
+      { name: 'Disable (normal mode)', value: 'off' },
       { name: brand.muted('↩   Back'), value: 'back' },
     ],
   });
@@ -550,7 +550,7 @@ async function runTrashInteractive(ctx: CommandContext): Promise<void> {
   const entries = await trashStore.list();
 
   const output: string[] = [];
-  output.push(header('Trash Manager', '🗑️'));
+  output.push(header('Trash Manager'));
   output.push('');
 
   if (entries.length === 0) {
@@ -613,7 +613,7 @@ async function runReportInteractive(ctx: CommandContext): Promise<void> {
   ctx.logger.startSpinner('Generating project report...');
 
   const output: string[] = [];
-  output.push(header('Project Report', '📊'));
+  output.push(header('Project Report'));
   output.push('');
 
   // Read package.json for project info
@@ -755,7 +755,7 @@ async function runAttackInteractive(ctx: CommandContext): Promise<void> {
   ctx.logger.stopSpinner(true);
 
   const output: string[] = [];
-  output.push(header('Cyberattack Proof Scan', '🛡️'));
+  output.push(header('Cyberattack Proof Scan'));
   output.push('');
   output.push(`  ${brand.muted('Scanned for:')} ${brand.secondary(result.coverage.length + ' attack types')} ${brand.muted('(DDoS, brute-force, OTP abuse, SQLi, XSS, SSRF, CSRF, weak crypto, etc.)')}`);
   output.push('');
@@ -798,12 +798,12 @@ async function runAttackInteractive(ctx: CommandContext): Promise<void> {
 
   const choices: Array<{ name: string; value: string }> = [];
   if (hasCredentials) {
-    choices.push({ name: '🤖  Run AI Deep Scan (stronger, uses your LLM)', value: 'ai' });
+    choices.push({ name: 'Run AI Deep Scan (stronger, uses your LLM)', value: 'ai' });
   } else {
-    choices.push({ name: '🔑  Set up LLM API key for AI deep scan', value: 'setup' });
+    choices.push({ name: 'Set up LLM API key for AI deep scan', value: 'setup' });
   }
-  choices.push({ name: '📋  Copy findings to clipboard', value: 'copy' });
-  choices.push({ name: '↩️   Back to menu', value: 'back' });
+  choices.push({ name: 'Copy findings to clipboard', value: 'copy' });
+  choices.push({ name: 'Back to menu', value: 'back' });
 
   const action = await selectPrompt<string>({
     message: brand.primary('What next?'),
@@ -844,9 +844,9 @@ async function runAttackInteractive(ctx: CommandContext): Promise<void> {
       const fixAction = await selectPrompt<string>({
         message: brand.primary('Fix these issues now?'),
         choices: [
-          { name: '🤖  Yes — Let AI fix the vulnerable files (with backup)', value: 'fix' },
-          { name: '👁️   Preview AI fixes first (diff, no changes)', value: 'preview' },
-          { name: '↩️   Not now', value: 'skip' },
+          { name: 'Yes — Let AI fix the vulnerable files (with backup)', value: 'fix' },
+          { name: 'Preview AI fixes first (diff, no changes)', value: 'preview' },
+          { name: 'Not now', value: 'skip' },
         ],
       });
 
@@ -890,7 +890,7 @@ async function runLLMConfigInteractive(ctx: CommandContext): Promise<void> {
   const { runConfig } = await import('./config.js');
 
   process.stdout.write('\n');
-  process.stdout.write(header('Configure LLM Provider', '🔑') + '\n\n');
+  process.stdout.write(header('Configure LLM Provider') + '\n\n');
 
   const provider = await selectPrompt<LLMProvider>({
     message: brand.primary('Select your LLM provider:'),
@@ -995,8 +995,8 @@ async function runAIFixFlow(
   const confirm = await selectPrompt<string>({
     message: brand.primary(`Apply these fixes to ${changedPlans.length} file(s)?`),
     choices: [
-      { name: '✅  Yes, apply (originals backed up to .vibeguard-trash/)', value: 'yes' },
-      { name: '❌  Cancel', value: 'no' },
+      { name: 'Yes, apply (originals backed up to .vibeguard-trash/)', value: 'yes' },
+      { name: 'Cancel', value: 'no' },
     ],
   });
 

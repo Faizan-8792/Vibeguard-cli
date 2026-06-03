@@ -45,7 +45,7 @@ Detect dead code: unused files, unused exports.
 Execute: \`npx vibeguard clean --plan --json\`
 
 ### \`/vibeguard map\`
-Build the dependency graph.
+Rebuild the dependency graph (run once after big code changes).
 
 Execute: \`npx vibeguard map --json\`
 
@@ -74,7 +74,11 @@ Show available commands.
 const STEERING_CONTENT = `---
 inclusion: auto
 ---
-# VibeGuard — Always-On Context
+# VibeGuard Guide — Always-On Context
+
+> Auto-loaded guidance file. You do NOT pick this in the chat box. To run
+> VibeGuard, pick the **\`vibeguard\` skill** (or type \`/vibeguard <task>\`) —
+> that builds the map and packs context automatically.
 
 VibeGuard is installed in this project. Type \`/vibeguard\` in chat to use it.
 
@@ -84,7 +88,7 @@ VibeGuard is installed in this project. Type \`/vibeguard\` in chat to use it.
 - \`/vibeguard pack "task"\` — Optimized context (80-95% fewer tokens)
 - \`/vibeguard context "task"\` — Generate and auto-include context
 - \`/vibeguard dead\` — Dead code detection
-- \`/vibeguard map\` — Dependency graph
+- \`/vibeguard map\` — Rebuild the dependency graph (local, no tokens)
 - \`/vibeguard fix\` — Auto-fix security issues
 
 ## When to Use
@@ -96,7 +100,7 @@ VibeGuard is installed in this project. Type \`/vibeguard\` in chat to use it.
 #[[file:.vibeguard/context-package.md]]
 `;
 
-const SUPPORTED_PLATFORMS = ['kiro', 'cursor', 'claude', 'copilot', 'gemini', 'aider'] as const;
+const SUPPORTED_PLATFORMS = ['kiro', 'cursor', 'claude', 'copilot', 'gemini', 'aider', 'vscode', 'codex'] as const;
 type SupportedPlatform = (typeof SUPPORTED_PLATFORMS)[number];
 
 function normalizePlatform(platform: string): SupportedPlatform {
@@ -131,11 +135,12 @@ async function withSuppressedStdout<T>(enabled: boolean, fn: () => Promise<T>): 
 async function writeMcpConfig(
   projectRoot: string,
   relativeConfigPath: string,
+  serverKey: 'mcpServers' | 'servers' = 'mcpServers',
 ): Promise<{ action: string; path: string }> {
   const configPath = join(projectRoot, relativeConfigPath);
   await mkdir(dirname(configPath), { recursive: true });
 
-  let config: { mcpServers?: Record<string, unknown> } = {};
+  let config: Record<string, unknown> = {};
   let action = 'Created';
   try {
     const raw = await readFile(configPath, 'utf-8');
@@ -145,11 +150,11 @@ async function writeMcpConfig(
     // No existing config (or unreadable) — start fresh.
   }
 
-  if (!config.mcpServers || typeof config.mcpServers !== 'object') {
-    config.mcpServers = {};
-  }
+  const existing = config[serverKey];
+  const servers: Record<string, unknown> =
+    existing && typeof existing === 'object' ? (existing as Record<string, unknown>) : {};
 
-  config.mcpServers['vibeguard'] = {
+  servers['vibeguard'] = {
     command: 'npx',
     args: ['-y', 'vibeguard', 'serve'],
     disabled: false,
@@ -161,6 +166,7 @@ async function writeMcpConfig(
       'find_path',
     ],
   };
+  config[serverKey] = servers;
 
   await writeFile(configPath, JSON.stringify(config, null, 2) + '\n', 'utf-8');
   return { action: `${action} MCP config`, path: relativeConfigPath.replace(/\\/g, '/') };
@@ -173,27 +179,30 @@ async function writeMcpConfig(
 async function removeMcpConfig(
   projectRoot: string,
   relativeConfigPath: string,
+  serverKey: 'mcpServers' | 'servers' = 'mcpServers',
 ): Promise<{ removed: boolean; path: string }> {
   const normalizedPath = relativeConfigPath.replace(/\\/g, '/');
   const configPath = join(projectRoot, relativeConfigPath);
 
-  let config: { mcpServers?: Record<string, unknown> };
+  let config: Record<string, unknown>;
   try {
     config = JSON.parse(await readFile(configPath, 'utf-8'));
   } catch {
     return { removed: false, path: normalizedPath };
   }
 
-  if (!config.mcpServers || !config.mcpServers['vibeguard']) {
+  const servers = config[serverKey];
+  if (!servers || typeof servers !== 'object' || !(servers as Record<string, unknown>)['vibeguard']) {
     return { removed: false, path: normalizedPath };
   }
 
-  delete config.mcpServers['vibeguard'];
+  delete (servers as Record<string, unknown>)['vibeguard'];
 
-  if (Object.keys(config.mcpServers).length === 0) {
+  if (Object.keys(servers as Record<string, unknown>).length === 0) {
     const { rm } = await import('node:fs/promises');
     await rm(configPath);
   } else {
+    config[serverKey] = servers;
     await writeFile(configPath, JSON.stringify(config, null, 2) + '\n', 'utf-8');
   }
 
@@ -223,6 +232,12 @@ export async function runInstall(ctx: CommandContext, opts: { platform: string; 
         break;
       case 'aider':
         await installAider(projectRoot);
+        break;
+      case 'vscode':
+        await installVscode(projectRoot);
+        break;
+      case 'codex':
+        await installCodex(projectRoot);
         break;
     }
   });
@@ -257,7 +272,7 @@ export async function runInstall(ctx: CommandContext, opts: { platform: string; 
 async function installKiro(projectRoot: string): Promise<void> {
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard Install', '⚡'));
+  output.push(header('VibeGuard Install'));
   output.push('');
 
   // Create skill directory
@@ -269,8 +284,8 @@ async function installKiro(projectRoot: string): Promise<void> {
   // Create steering file
   const steeringDir = join(projectRoot, '.kiro', 'steering');
   await mkdir(steeringDir, { recursive: true });
-  await writeFile(join(steeringDir, 'vibeguard.md'), STEERING_CONTENT, 'utf-8');
-  output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.kiro/steering/vibeguard.md')}`);
+  await writeFile(join(steeringDir, 'vibeguard-guide.md'), STEERING_CONTENT, 'utf-8');
+  output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.kiro/steering/vibeguard-guide.md')}`);
 
   // Write a real MCP server config so the agent gets live tools, not just instructions.
   const mcpResult = await writeMcpConfig(projectRoot, join('.kiro', 'settings', 'mcp.json'));
@@ -341,7 +356,7 @@ The dependency graph is at \`.vibeguard/graph.json\`. Use it to understand file 
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard — Cursor Install', '⚡'));
+  output.push(header('VibeGuard — Cursor Install'));
   output.push('');
   output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.cursor/rules/vibeguard.mdc')}`);
   output.push('');
@@ -387,7 +402,7 @@ Available tools:
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard — Claude Code Install', '⚡'));
+  output.push(header('VibeGuard — Claude Code Install'));
   output.push('');
   output.push(`  ${statusIcon('success')} ${brand.success('Added VibeGuard section to')} ${brand.muted('CLAUDE.md')}`);
   output.push('');
@@ -436,7 +451,7 @@ Before answering questions about architecture or making multi-file changes:
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard — GitHub Copilot Install', '⚡'));
+  output.push(header('VibeGuard — GitHub Copilot Install'));
   output.push('');
   output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.github/copilot-instructions.md')}`);
   output.push('');
@@ -503,7 +518,7 @@ Before answering questions about architecture or making multi-file changes:
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard — Gemini Install', '⚡'));
+  output.push(header('VibeGuard — Gemini Install'));
   output.push('');
   output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.gemini/CONTEXT.md')}`);
   output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.gemini/settings.json')}`);
@@ -585,7 +600,7 @@ read:
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard — Aider Install', '⚡'));
+  output.push(header('VibeGuard — Aider Install'));
   output.push('');
   output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.aider.context.md')}`);
   if (!confExists) {
@@ -596,6 +611,97 @@ read:
   output.push('');
   output.push(`  ${brand.primary.bold('Done!')} VibeGuard is now integrated with Aider.`);
   output.push(`  ${brand.muted('Use /read .vibeguard/context-package.md in Aider for optimized context.')}`);
+  output.push('');
+  process.stdout.write(output.join('\n') + '\n');
+}
+
+// ─── VS Code (native Copilot Chat / MCP) ─────────────────────────────────────
+async function installVscode(projectRoot: string): Promise<void> {
+  const instructionsDir = join(projectRoot, '.github');
+  await mkdir(instructionsDir, { recursive: true });
+
+  const instructions = `# VibeGuard — VS Code Integration
+
+VS Code's built-in Copilot Chat reads \`.github/copilot-instructions.md\`. When working
+on this codebase, use VibeGuard for intelligent context selection and security scanning.
+
+## Context Selection
+1. Run \`npx vibeguard pack "<task>" --json\` to get the optimal file set
+2. Read ONLY the files listed (5-15 most relevant) — never read the whole project
+3. Use \`.vibeguard/graph.json\` to understand file relationships
+
+## Available Commands
+- \`npx vibeguard --scan\` — secrets & security vulnerabilities
+- \`npx vibeguard --health\` — project quality score (0-100)
+- \`npx vibeguard attack\` — cyberattack vulnerability scan
+- \`npx vibeguard audit\` — unified security audit (deps, taint, misconfig, secrets, attacks)
+- \`npx vibeguard graph\` — interactive HTML dependency graph
+- \`npx vibeguard pack "task"\` — optimized context (80-95% fewer tokens)
+
+## Live MCP Tools
+This project also configures a VibeGuard MCP server in \`.vscode/mcp.json\`, exposing
+\`pack_context\`, \`query_graph\`, \`scan_security\`, \`run_audit\`, and more directly to the agent.
+`;
+
+  await writeFile(join(instructionsDir, 'copilot-instructions.md'), instructions, 'utf-8');
+
+  // VS Code MCP config uses the "servers" key (not "mcpServers").
+  const mcpResult = await writeMcpConfig(projectRoot, join('.vscode', 'mcp.json'), 'servers');
+
+  const output: string[] = [];
+  output.push('');
+  output.push(header('VibeGuard — VS Code Install'));
+  output.push('');
+  output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.github/copilot-instructions.md')}`);
+  output.push(`  ${statusIcon('success')} ${brand.success(mcpResult.action)} ${brand.muted(mcpResult.path)}`);
+  output.push('');
+  output.push(`  ${brand.primary.bold('Done!')} VibeGuard is now integrated with VS Code.`);
+  output.push(`  ${brand.muted('Copilot Chat uses the instructions; the MCP server gives live graph/security tools.')}`);
+  output.push('');
+  process.stdout.write(output.join('\n') + '\n');
+}
+
+// ─── Codex / universal AGENTS.md agents ──────────────────────────────────────
+async function installCodex(projectRoot: string): Promise<void> {
+  const agentsPath = join(projectRoot, 'AGENTS.md');
+  const section = `## VibeGuard — Intelligent Context & Security
+
+When working on this codebase, use VibeGuard (a local CLI) for context selection and security.
+
+- Before multi-file changes or architecture questions: \`npx vibeguard pack "<task>" --json\`,
+  then read ONLY the 5-15 listed files. Never read the whole project blindly.
+- Security: \`npx vibeguard audit --json\` (deps, taint, misconfig, secrets, attacks → 0-100 score),
+  \`npx vibeguard attack --json\`, \`npx vibeguard --scan\`.
+- Graph Q&A (zero tokens): \`npx vibeguard query "<question>" --json\`, \`explain\`, \`affected\`.
+- Key files: \`.vibeguard/graph.json\`, \`.vibeguard/context-package.md\`.
+`;
+
+  let existing = '';
+  try {
+    existing = await readFile(agentsPath, 'utf-8');
+  } catch {
+    // No AGENTS.md yet — create one.
+  }
+
+  let action: string;
+  if (existing.includes('## VibeGuard')) {
+    action = 'AGENTS.md already contains a VibeGuard section';
+  } else if (existing.trim().length > 0) {
+    await writeFile(agentsPath, existing.trimEnd() + '\n\n' + section, 'utf-8');
+    action = 'Added VibeGuard section to AGENTS.md';
+  } else {
+    await writeFile(agentsPath, `# Agent Instructions\n\n${section}`, 'utf-8');
+    action = 'Created AGENTS.md';
+  }
+
+  const output: string[] = [];
+  output.push('');
+  output.push(header('VibeGuard — Codex / AGENTS.md Install'));
+  output.push('');
+  output.push(`  ${statusIcon('success')} ${brand.success(action)}`);
+  output.push('');
+  output.push(`  ${brand.primary.bold('Done!')} VibeGuard is now described in AGENTS.md.`);
+  output.push(`  ${brand.muted('Codex, Jules, Amp and other AGENTS.md-aware agents will pick this up.')}`);
   output.push('');
   process.stdout.write(output.join('\n') + '\n');
 }
@@ -623,6 +729,12 @@ export async function runUninstall(ctx: CommandContext, opts: { platform: string
         break;
       case 'aider':
         await uninstallAider(projectRoot);
+        break;
+      case 'vscode':
+        await uninstallVscode(projectRoot);
+        break;
+      case 'codex':
+        await uninstallCodex(projectRoot);
         break;
     }
   });
@@ -654,7 +766,7 @@ async function uninstallKiro(projectRoot: string): Promise<void> {
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard Uninstall — Kiro', '🗑️'));
+  output.push(header('VibeGuard Uninstall — Kiro'));
   output.push('');
 
   try {
@@ -665,10 +777,18 @@ async function uninstallKiro(projectRoot: string): Promise<void> {
   }
 
   try {
-    await rm(join(projectRoot, '.kiro', 'steering', 'vibeguard.md'));
-    output.push(`  ${statusIcon('success')} ${brand.success('Removed')} ${brand.muted('.kiro/steering/vibeguard.md')}`);
+    await rm(join(projectRoot, '.kiro', 'steering', 'vibeguard-guide.md'));
+    output.push(`  ${statusIcon('success')} ${brand.success('Removed')} ${brand.muted('.kiro/steering/vibeguard-guide.md')}`);
   } catch {
     output.push(`  ${statusIcon('info')} ${brand.muted('Steering file not found (already removed)')}`);
+  }
+
+  // Legacy: earlier versions wrote the steering file as vibeguard.md.
+  try {
+    await rm(join(projectRoot, '.kiro', 'steering', 'vibeguard.md'));
+    output.push(`  ${statusIcon('success')} ${brand.success('Removed')} ${brand.muted('.kiro/steering/vibeguard.md (legacy)')}`);
+  } catch {
+    // No legacy file — fine.
   }
 
   const mcpResult = await removeMcpConfig(projectRoot, join('.kiro', 'settings', 'mcp.json'));
@@ -689,7 +809,7 @@ async function uninstallCursor(projectRoot: string): Promise<void> {
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard Uninstall — Cursor', '🗑️'));
+  output.push(header('VibeGuard Uninstall — Cursor'));
   output.push('');
 
   try {
@@ -732,7 +852,7 @@ async function uninstallClaude(projectRoot: string): Promise<void> {
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard Uninstall — Claude Code', '🗑️'));
+  output.push(header('VibeGuard Uninstall — Claude Code'));
   output.push('');
   output.push(`  ${statusIcon('success')} ${brand.success('Removed VibeGuard section from')} ${brand.muted('CLAUDE.md')}`);
   output.push('');
@@ -746,7 +866,7 @@ async function uninstallCopilot(projectRoot: string): Promise<void> {
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard Uninstall — GitHub Copilot', '🗑️'));
+  output.push(header('VibeGuard Uninstall — GitHub Copilot'));
   output.push('');
 
   try {
@@ -767,7 +887,7 @@ async function uninstallGemini(projectRoot: string): Promise<void> {
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard Uninstall — Gemini', '🗑️'));
+  output.push(header('VibeGuard Uninstall — Gemini'));
   output.push('');
 
   try {
@@ -802,7 +922,7 @@ async function uninstallAider(projectRoot: string): Promise<void> {
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard Uninstall — Aider', '🗑️'));
+  output.push(header('VibeGuard Uninstall — Aider'));
   output.push('');
 
   try {
@@ -815,6 +935,71 @@ async function uninstallAider(projectRoot: string): Promise<void> {
   output.push('');
   output.push(`  ${brand.muted('VibeGuard uninstalled from Aider. .vibeguard/ data preserved.')}`);
   output.push(`  ${brand.muted('Note: .aider.conf.yml was preserved (may contain user config).')}`);
+  output.push('');
+  process.stdout.write(output.join('\n') + '\n');
+}
+
+async function uninstallVscode(projectRoot: string): Promise<void> {
+  const { rm } = await import('node:fs/promises');
+
+  const output: string[] = [];
+  output.push('');
+  output.push(header('VibeGuard Uninstall — VS Code'));
+  output.push('');
+
+  try {
+    await rm(join(projectRoot, '.github', 'copilot-instructions.md'));
+    output.push(`  ${statusIcon('success')} ${brand.success('Removed')} ${brand.muted('.github/copilot-instructions.md')}`);
+  } catch {
+    output.push(`  ${statusIcon('info')} ${brand.muted('Copilot instructions not found (already removed)')}`);
+  }
+
+  const mcpResult = await removeMcpConfig(projectRoot, join('.vscode', 'mcp.json'), 'servers');
+  if (mcpResult.removed) {
+    output.push(`  ${statusIcon('success')} ${brand.success('Removed vibeguard server from')} ${brand.muted(mcpResult.path)}`);
+  } else {
+    output.push(`  ${statusIcon('info')} ${brand.muted('No vibeguard MCP entry found (already removed)')}`);
+  }
+
+  output.push('');
+  output.push(`  ${brand.muted('VibeGuard uninstalled from VS Code. .vibeguard/ data preserved.')}`);
+  output.push('');
+  process.stdout.write(output.join('\n') + '\n');
+}
+
+async function uninstallCodex(projectRoot: string): Promise<void> {
+  const agentsPath = join(projectRoot, 'AGENTS.md');
+
+  const output: string[] = [];
+  output.push('');
+  output.push(header('VibeGuard Uninstall — Codex / AGENTS.md'));
+  output.push('');
+
+  let content = '';
+  try {
+    content = await readFile(agentsPath, 'utf-8');
+  } catch {
+    output.push(`  ${statusIcon('info')} ${brand.muted('AGENTS.md not found (nothing to remove)')}`);
+    output.push('');
+    process.stdout.write(output.join('\n') + '\n');
+    return;
+  }
+
+  const sectionStart = content.indexOf('## VibeGuard');
+  if (sectionStart === -1) {
+    output.push(`  ${statusIcon('info')} ${brand.muted('No VibeGuard section found in AGENTS.md')}`);
+  } else {
+    const afterSection = content.slice(sectionStart + 1);
+    const nextHeading = afterSection.indexOf('\n## ');
+    const cleaned = nextHeading === -1
+      ? content.slice(0, sectionStart).trimEnd() + '\n'
+      : content.slice(0, sectionStart) + afterSection.slice(nextHeading + 1);
+    await writeFile(agentsPath, cleaned, 'utf-8');
+    output.push(`  ${statusIcon('success')} ${brand.success('Removed VibeGuard section from')} ${brand.muted('AGENTS.md')}`);
+  }
+
+  output.push('');
+  output.push(`  ${brand.muted('VibeGuard uninstalled from Codex/AGENTS.md. .vibeguard/ data preserved.')}`);
   output.push('');
   process.stdout.write(output.join('\n') + '\n');
 }

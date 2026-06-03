@@ -25,7 +25,7 @@ export async function runWatch(ctx: CommandContext, opts: WatchCommandOptions): 
   const isSkipped = picomatch(config.effectiveSkipSet);
   const isIncluded = picomatch(config.effectiveInclude);
 
-  process.stdout.write(header('VibeGuard Watch', '👁️') + '\n');
+  process.stdout.write(header('VibeGuard Watch') + '\n');
   process.stdout.write(`\n  ${statusIcon('success')} ${brand.success('Watching for changes...')} ${brand.muted('(Ctrl+C to stop)')}\n`);
   process.stdout.write(`  ${brand.muted('Project:')} ${brand.secondary(projectRoot)}\n\n`);
 

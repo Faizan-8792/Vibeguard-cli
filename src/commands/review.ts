@@ -89,7 +89,7 @@ function renderBrief(result: import('../engines/change-detector.js').ChangeRevie
 
 function renderFull(result: import('../engines/change-detector.js').ChangeReviewResult): void {
   const output: string[] = [];
-  output.push(header('Change Review', '🔬'));
+  output.push(header('Change Review'));
   output.push('');
   output.push(keyValue('Base', brand.secondary(result.base)));
   output.push(summaryLine([

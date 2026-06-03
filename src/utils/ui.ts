@@ -37,9 +37,12 @@ export function banner(): string {
 }
 
 // ─── Section Header ─────────────────────────────────────────────────────────
-export function header(title: string, icon = '◆'): string {
+// The `icon` parameter is accepted for backwards compatibility with existing
+// call sites but is intentionally not rendered: CLI output uses a clean,
+// professional marker instead of emoji. (Emoji are reserved for the README.)
+export function header(title: string, _icon?: string): string {
   const line = brand.muted(BOX.horizontal.repeat(50));
-  return `\n  ${brand.primary(icon)} ${chalk.bold(title)}\n  ${line}`;
+  return `\n  ${brand.primary.bold(title)}\n  ${line}`;
 }
 
 export interface BoxOptions {

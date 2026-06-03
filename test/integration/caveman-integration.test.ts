@@ -146,10 +146,7 @@ describe('Integration: Caveman multi-IDE rule mirroring', () => {
     expect(body).toMatch(/description: .+/);
   });
 
-  it('mirrors into Cursor and Windsurf when their rules dirs exist', async () => {
-    await mkdir(join(projectRoot, '.cursor', 'rules'), { recursive: true });
-    await mkdir(join(projectRoot, '.windsurf', 'rules'), { recursive: true });
-
+  it('always creates Cursor and Windsurf rule files (works without prior install)', async () => {
     const { enableCaveman } = await import('../../src/engines/caveman.js');
     const { written } = await enableCaveman(projectRoot, 'full');
 
@@ -164,13 +161,13 @@ describe('Integration: Caveman multi-IDE rule mirroring', () => {
     expect(windsurf).toContain('🪨 Caveman mode: ON (full)');
   });
 
-  it('folds a marker block into existing memory files (CLAUDE.md, AGENTS.md, .windsurfrules)', async () => {
+  it('creates cross-tool memory files (CLAUDE.md, AGENTS.md) and folds existing ones', async () => {
     await writeFile(join(projectRoot, 'CLAUDE.md'), '# Project\n\nNotes.\n', 'utf-8');
-    await writeFile(join(projectRoot, 'AGENTS.md'), '# Agents\n\nGuide.\n', 'utf-8');
     await writeFile(join(projectRoot, '.windsurfrules'), 'existing windsurf rules\n', 'utf-8');
 
     const { enableCaveman, disableCaveman } = await import('../../src/engines/caveman.js');
     const { written } = await enableCaveman(projectRoot, 'full');
+    // CLAUDE.md existed; AGENTS.md is created fresh; .windsurfrules folded.
     expect(written).toEqual(expect.arrayContaining(['CLAUDE.md', 'AGENTS.md', '.windsurfrules']));
 
     for (const f of ['CLAUDE.md', 'AGENTS.md', '.windsurfrules']) {
@@ -179,24 +176,27 @@ describe('Integration: Caveman multi-IDE rule mirroring', () => {
       expect(c).toContain('🪨 Caveman mode: ON (full)');
     }
 
-    // Disable strips the blocks and keeps original content intact.
+    // Disable strips the block; existing files keep their original content,
+    // and the file VibeGuard created (AGENTS.md) is removed entirely.
     await disableCaveman(projectRoot);
     const claude = await readFile(join(projectRoot, 'CLAUDE.md'), 'utf-8');
     expect(claude).toContain('Notes.');
     expect(claude).not.toContain('vibeguard-caveman:begin');
+    expect(await exists(join(projectRoot, 'AGENTS.md'))).toBe(false);
     const windsurfRules = await readFile(join(projectRoot, '.windsurfrules'), 'utf-8');
     expect(windsurfRules).toContain('existing windsurf rules');
     expect(windsurfRules).not.toContain('vibeguard-caveman:begin');
   });
 
-  it('does NOT create IDE rule files that were not already present', async () => {
+  it('creates the canonical IDE rule files even on a fresh project (Caveman works everywhere)', async () => {
     const { enableCaveman } = await import('../../src/engines/caveman.js');
     await enableCaveman(projectRoot, 'full');
-    // No .cursor/.windsurf dirs and no memory files existed → only Kiro written.
-    expect(await exists(join(projectRoot, CURSOR))).toBe(false);
-    expect(await exists(join(projectRoot, WINDSURF))).toBe(false);
-    expect(await exists(join(projectRoot, 'CLAUDE.md'))).toBe(false);
-    expect(await exists(join(projectRoot, 'AGENTS.md'))).toBe(false);
+    // Per-IDE rule files + created memory files are present without prior install.
+    expect(await exists(join(projectRoot, KIRO))).toBe(true);
+    expect(await exists(join(projectRoot, CURSOR))).toBe(true);
+    expect(await exists(join(projectRoot, WINDSURF))).toBe(true);
+    expect(await exists(join(projectRoot, 'CLAUDE.md'))).toBe(true);
+    expect(await exists(join(projectRoot, 'AGENTS.md'))).toBe(true);
   });
 
   it('uninstall removes Kiro + Cursor + Windsurf rule files', async () => {

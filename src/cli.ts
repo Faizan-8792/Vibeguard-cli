@@ -356,6 +356,34 @@ function setupProgram(): Command {
       else throw new VibeguardError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: vibeguard aider install | uninstall`);
     });
 
+  // vscode command
+  program
+    .command('vscode')
+    .description('Install/uninstall VibeGuard for VS Code (Copilot Chat + MCP)')
+    .argument('<action>', 'Action: install, uninstall')
+    .action(async (action) => {
+      const globalOpts = program.opts() as GlobalOptions;
+      const ctx = await createContext(globalOpts, 'install');
+      const { runInstall, runUninstall } = await import('./commands/install.js');
+      if (action === 'install') await runInstall(ctx, { platform: 'vscode' });
+      else if (action === 'uninstall') await runUninstall(ctx, { platform: 'vscode' });
+      else throw new VibeguardError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: vibeguard vscode install | uninstall`);
+    });
+
+  // codex command (also covers any AGENTS.md-aware agent)
+  program
+    .command('codex')
+    .description('Install/uninstall VibeGuard for Codex / AGENTS.md agents')
+    .argument('<action>', 'Action: install, uninstall')
+    .action(async (action) => {
+      const globalOpts = program.opts() as GlobalOptions;
+      const ctx = await createContext(globalOpts, 'install');
+      const { runInstall, runUninstall } = await import('./commands/install.js');
+      if (action === 'install') await runInstall(ctx, { platform: 'codex' });
+      else if (action === 'uninstall') await runUninstall(ctx, { platform: 'codex' });
+      else throw new VibeguardError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: vibeguard codex install | uninstall`);
+    });
+
   // install command
   program
     .command('install')
