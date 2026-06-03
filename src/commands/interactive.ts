@@ -48,6 +48,20 @@ export async function runInteractive(ctx: CommandContext): Promise<void> {
     // Re-anchor the view at the top of the terminal on every cycle so output
     // never drifts down the screen and the menu is always in the same place.
     clearScreen();
+
+    // ── Active-mode indicators (strictly one line each, only when ON) ──────
+    const { loadCavemanState } = await import('../engines/caveman.js');
+    const cavemanState = await loadCavemanState(ctx.projectRoot);
+    if (cavemanState.enabled) {
+      process.stdout.write(`Caveman mode: ON\n`);
+    }
+    // GraphMode: ON when the dependency graph exists (built at least once).
+    const { loadGraph } = await import('../engines/graph-builder.js');
+    const graphExists = await loadGraph(ctx.projectRoot);
+    if (graphExists) {
+      process.stdout.write(`GraphMode: ON\n`);
+    }
+
     process.stdout.write('\n');
     process.stdout.write(banner());
     process.stdout.write('\n');
@@ -55,18 +69,20 @@ export async function runInteractive(ctx: CommandContext): Promise<void> {
     const action = await select<string>({
       message: brand.primary.bold('What would you like to do?'),
       choices: [
-        { name: 'Security Scan        — Find secrets & vulnerabilities', value: 'security' },
-        { name: 'Cyberattack Proof     — Scan for DDoS, SQLi, XSS, OTP abuse...', value: 'attack' },
-        { name: 'Security Audit        — Deps (CVE), taint, misconfig + SBOM', value: 'audit' },
-        { name: 'Health Check          — Project health score', value: 'health' },
-        { name: 'Dependency Graph      — Map file relationships', value: 'map' },
-        { name: 'Dead Code Detection   — Find unused files & exports', value: 'dead' },
-        { name: 'Context Package       — Generate AI context', value: 'pack' },
-        { name: 'Caveman Mode          — Save tokens & boost speed', value: 'caveman' },
-        { name: 'Trash Manager         — View soft-deleted files', value: 'trash' },
-        { name: 'Initialize Config     — Setup .vibeguard/', value: 'init' },
-        { name: 'Configure LLM         — Add API key (OpenAI, Gemini, DeepSeek...)', value: 'llm' },
-        { name: 'Project Report        — Full project description', value: 'report' },
+        { name: 'Quick Setup            — Install all & become ready', value: 'quick-setup' },
+        { name: 'Security Scan          — Find secrets & vulnerabilities', value: 'security' },
+        { name: 'Cyberattack Proof      — Scan for DDoS, SQLi, XSS, OTP abuse...', value: 'attack' },
+        { name: 'Security Audit         — Deps (CVE), taint, misconfig + SBOM', value: 'audit' },
+        { name: 'Health Check           — Project health score', value: 'health' },
+        { name: 'Dependency Graph       — Map file relationships', value: 'map' },
+        { name: 'Dead Code Detection    — Find unused files & exports', value: 'dead' },
+        { name: 'Context Package        — Generate AI context', value: 'pack' },
+        { name: 'Caveman Mode           — Save tokens & boost speed', value: 'caveman' },
+        { name: 'GraphMode              — Use graph for token savings', value: 'graphmode' },
+        { name: 'Trash Manager          — View soft-deleted files', value: 'trash' },
+        { name: 'Initialize Config      — Setup .vibeguard/', value: 'init' },
+        { name: 'Configure LLM          — Add API key (OpenAI, Gemini, DeepSeek...)', value: 'llm' },
+        { name: 'Project Report         — Full project description', value: 'report' },
         { name: brand.muted('Exit'), value: 'exit' },
       ],
     });
@@ -80,6 +96,9 @@ export async function runInteractive(ctx: CommandContext): Promise<void> {
 
     try {
       switch (action) {
+        case 'quick-setup':
+          await runQuickSetupInteractive(ctx);
+          break;
         case 'security':
           await runSecurityInteractive(ctx);
           break;
@@ -103,6 +122,9 @@ export async function runInteractive(ctx: CommandContext): Promise<void> {
           break;
         case 'caveman':
           await runCavemanInteractive(ctx);
+          break;
+        case 'graphmode':
+          await runGraphModeInteractive(ctx);
           break;
         case 'trash':
           await runTrashInteractive(ctx);
@@ -141,6 +163,85 @@ async function pauseForReturn(): Promise<void> {
     await input({ message: brand.muted('Press Enter to return to the menu…') });
   } catch {
     // Ctrl-C / closed prompt — fall through to the loop, which handles exit.
+  }
+}
+
+/**
+ * Quick Setup: one action = init config + build graph + enable caveman. Makes
+ * the project fully ready for VibeGuard in a single menu pick (equivalent to
+ * running `npx vibeguard init` from the terminal).
+ */
+async function runQuickSetupInteractive(ctx: CommandContext): Promise<void> {
+  const output: string[] = [];
+  output.push(header('Quick Setup'));
+  output.push('');
+
+  // 1) Init config
+  const { runInit } = await import('./init.js');
+  try {
+    await runInit(ctx, { force: false });
+    output.push(`  ${statusIcon('success')} ${brand.success('Configuration initialized')}`);
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('already exists')) {
+      output.push(`  ${statusIcon('info')} ${brand.muted('Config already exists (kept)')}`);
+    } else {
+      throw err;
+    }
+  }
+
+  // 2) Build graph + HTML + report
+  output.push(`  ${statusIcon('info')} ${brand.muted('Building dependency graph...')}`);
+  process.stdout.write(output.join('\n') + '\n');
+  await runMapInteractive(ctx);
+
+  // 3) Enable Caveman Mode
+  const { enableCaveman, DEFAULT_CAVEMAN_LEVEL } = await import('../engines/caveman.js');
+  await enableCaveman(ctx.projectRoot, DEFAULT_CAVEMAN_LEVEL);
+  process.stdout.write(`\n  ${statusIcon('success')} ${brand.success('Caveman Mode enabled (full)')}\n`);
+  process.stdout.write(`  ${statusIcon('success')} ${brand.success('GraphMode: ON (graph built)')}\n`);
+  process.stdout.write(`\n  ${brand.primary.bold('All done! Project is fully ready.')}\n`);
+}
+
+/**
+ * GraphMode toggle. GraphMode is "ON" when the dependency graph exists — it
+ * enables graph-first token savings in all AI interactions. Toggling OFF deletes
+ * the graph artifacts; toggling ON builds them.
+ */
+async function runGraphModeInteractive(ctx: CommandContext): Promise<void> {
+  const { loadGraph } = await import('../engines/graph-builder.js');
+  const graphExists = await loadGraph(ctx.projectRoot);
+
+  if (graphExists) {
+    // Already ON — offer to turn off (delete graph artifacts).
+    const action = await select<string>({
+      message: brand.primary.bold('GraphMode is ON. What do you want?'),
+      choices: [
+        { name: 'Rebuild graph (refresh)', value: 'rebuild' },
+        { name: 'Turn OFF (delete graph)', value: 'off' },
+        { name: brand.muted('↩   Back'), value: 'back' },
+      ],
+    });
+
+    if (action === 'back') return;
+    if (action === 'rebuild') {
+      await runMapInteractive(ctx);
+      return;
+    }
+    if (action === 'off') {
+      const { rm } = await import('node:fs/promises');
+      const { join } = await import('node:path');
+      const artifactPaths = ['graph.json', 'graph.html', 'GRAPH_REPORT.md', 'analysis-meta.json'];
+      for (const f of artifactPaths) {
+        try { await rm(join(ctx.projectRoot, '.vibeguard', f)); } catch { /* noop */ }
+      }
+      process.stdout.write(`\n  ${statusIcon('success')} ${brand.success('GraphMode: OFF')} ${brand.muted('(graph artifacts removed)')}\n`);
+      process.stdout.write(`  ${brand.muted('Rebuild anytime with "Dependency Graph" or "Quick Setup".')}\n`);
+    }
+  } else {
+    // OFF → build
+    process.stdout.write(`\n  ${statusIcon('info')} ${brand.muted('GraphMode is OFF. Building graph...')}\n\n`);
+    await runMapInteractive(ctx);
+    process.stdout.write(`\n  ${statusIcon('success')} ${brand.success('GraphMode: ON')}\n`);
   }
 }
 

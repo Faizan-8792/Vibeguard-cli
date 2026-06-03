@@ -56,7 +56,20 @@ const ENTRYPOINT_SUFFIXES = [
 ];
 
 // Directory prefixes whose files are framework-managed routes and always reachable.
-const ROUTE_PREFIXES = ['pages/', 'app/', 'src/pages/', 'src/app/'];
+const ROUTE_PREFIXES = [
+  'pages/', 'app/', 'src/pages/', 'src/app/', 'src/routes/',
+  'routes/', 'views/', 'src/views/',
+  // Electron / desktop
+  'electron/', 'main/', 'renderer/',
+  // Common script dirs (build scripts, CLI scripts)
+  'scripts/', 'bin/', 'tools/',
+  // Nuxt / SvelteKit / Astro / Remix
+  'layouts/', 'src/layouts/', 'components/', 'src/components/',
+  'middleware/', 'src/middleware/', 'plugins/', 'src/plugins/',
+  'server/', 'src/server/', 'api/', 'src/api/',
+  // Mobile
+  'screens/', 'src/screens/',
+];
 
 // If more than this fraction of files appear unreachable, entrypoint detection
 // almost certainly failed, so dead-code results are suppressed for safety.
@@ -268,6 +281,34 @@ async function identifyEntrypoints(
   // Next.js / framework route files are always reachable.
   for (const filePath of graphNodes.keys()) {
     if (ROUTE_PREFIXES.some((prefix) => filePath.startsWith(prefix))) {
+      entrypoints.add(filePath);
+    }
+  }
+
+  // ── Fallback: auto-discover entrypoints from graph topology ──────────────
+  // When no explicit entrypoint was found (no package.json main/bin, no
+  // conventional src/index.ts, no framework routes), the old behavior was to
+  // abort ("no valid entrypoint found"). This made dead-code unusable for many
+  // real projects (Electron apps, multi-folder repos, random JS projects).
+  //
+  // New behavior: treat files that are "roots" of the import tree (many
+  // dependents OR zero imports) as implicit entrypoints. This mirrors how real
+  // apps work — the files nobody imports are the entry scripts.
+  if (entrypoints.size === 0) {
+    // Strategy 1: files with zero imports into them (no dependents) that DO
+    // import other files are likely top-level scripts / entry files.
+    for (const [filePath, node] of graphNodes) {
+      if (node.dependents.length === 0 && node.imports.length > 0) {
+        entrypoints.add(filePath);
+      }
+    }
+  }
+
+  if (entrypoints.size === 0) {
+    // Strategy 2: if still nothing (all files are isolated), treat every file
+    // as its own entrypoint — effectively disables dead-code detection rather
+    // than aborting with a confusing error. Zero false positives > confusion.
+    for (const filePath of graphNodes.keys()) {
       entrypoints.add(filePath);
     }
   }
