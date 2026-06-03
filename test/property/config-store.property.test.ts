@@ -5,10 +5,10 @@ import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-/** Creates a temp directory with `.vibeguard/config.json` written with the given content string. */
+/** Creates a temp directory with `.codescout/config.json` written with the given content string. */
 async function createTempConfig(content: string): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), 'vg-prop-'));
-  const configDir = join(dir, '.vibeguard');
+  const configDir = join(dir, '.codescout');
   await mkdir(configDir, { recursive: true });
   await writeFile(join(configDir, 'config.json'), content, 'utf-8');
   return dir;
@@ -76,7 +76,7 @@ describe('Property 5: Glob Merge Correctness', () => {
         fc.array(fc.stringMatching(/^[a-z*]+$/), { minLength: 0, maxLength: 5 }),
         async (configIgnore, cliExclude) => {
           const dir = await mkdtemp(join(tmpdir(), 'vg-prop-'));
-          const configDir = join(dir, '.vibeguard');
+          const configDir = join(dir, '.codescout');
           await mkdir(configDir, { recursive: true });
           await writeFile(
             join(configDir, 'config.json'),
@@ -107,7 +107,7 @@ describe('Property 5: Glob Merge Correctness', () => {
         fc.array(fc.stringMatching(/^\*\*\/\*\.[a-z]{2,4}$/), { minLength: 1, maxLength: 3 }),
         async (cliInclude) => {
           const dir = await mkdtemp(join(tmpdir(), 'vg-prop-'));
-          const configDir = join(dir, '.vibeguard');
+          const configDir = join(dir, '.codescout');
           await mkdir(configDir, { recursive: true });
           await writeFile(join(configDir, 'config.json'), JSON.stringify({}), 'utf-8');
 

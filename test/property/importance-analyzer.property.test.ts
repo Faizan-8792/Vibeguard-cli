@@ -17,7 +17,7 @@ describe('Property 28: Importance Score Formula', () => {
         }),
         async ({ dependents, imports }) => {
           const dir = await mkdtemp(join(tmpdir(), 'vg-imp-'));
-          await mkdir(join(dir, '.vibeguard'), { recursive: true });
+          await mkdir(join(dir, '.codescout'), { recursive: true });
 
           const graphNodes = new Map<string, GraphNode>();
           const depList = Array.from({ length: dependents }, (_, i) => `dep${i}.ts`);
@@ -67,7 +67,7 @@ describe('Property 29: Route Usage Classification', () => {
     ];
 
     const dir = await mkdtemp(join(tmpdir(), 'vg-imp-'));
-    await mkdir(join(dir, '.vibeguard'), { recursive: true });
+    await mkdir(join(dir, '.codescout'), { recursive: true });
 
     const graphNodes = new Map<string, GraphNode>();
     for (const file of routeFiles) {
@@ -97,7 +97,7 @@ describe('Property 29: Route Usage Classification', () => {
     ];
 
     const dir = await mkdtemp(join(tmpdir(), 'vg-imp-'));
-    await mkdir(join(dir, '.vibeguard'), { recursive: true });
+    await mkdir(join(dir, '.codescout'), { recursive: true });
 
     const graphNodes = new Map<string, GraphNode>();
     for (const file of nonRouteFiles) {

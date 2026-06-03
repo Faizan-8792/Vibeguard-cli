@@ -1,7 +1,7 @@
 /**
  * MCP tool registry.
  *
- * Each tool wraps an existing VibeGuard engine and returns a plain JSON-able
+ * Each tool wraps an existing CodeScout engine and returns a plain JSON-able
  * object. The registry is transport-agnostic: the MCP server (server.ts) maps
  * these definitions onto the protocol, but the tools themselves can be invoked
  * directly in tests without any MCP runtime. This mirrors how the CLI commands
@@ -81,7 +81,7 @@ function num(args: Record<string, unknown>, key: string): number | undefined {
 }
 
 /**
- * The full set of VibeGuard MCP tools. Ordered roughly by how an agent should
+ * The full set of CodeScout MCP tools. Ordered roughly by how an agent should
  * reach for them: minimal context first, then security/health, then graph.
  */
 export function createTools(): ToolDefinition[] {
@@ -365,7 +365,7 @@ export function createTools(): ToolDefinition[] {
 }
 
 /**
- * Apply an optional allowlist (from `--tools` / VIBEGUARD_TOOLS) to a tool set.
+ * Apply an optional allowlist (from `--tools` / CODESCOUT_TOOLS) to a tool set.
  * Unknown names are ignored. An empty/undefined allowlist returns all tools.
  */
 export function filterTools(tools: ToolDefinition[], allow?: string[]): ToolDefinition[] {
@@ -376,7 +376,7 @@ export function filterTools(tools: ToolDefinition[], allow?: string[]): ToolDefi
 
 /** Parse an allowlist from a CLI flag value or env var (comma-separated). */
 export function parseToolAllowlist(flag?: string): string[] | undefined {
-  const raw = flag ?? process.env['VIBEGUARD_TOOLS'];
+  const raw = flag ?? process.env['CODESCOUT_TOOLS'];
   if (!raw) return undefined;
   const known = new Set<string>(TOOL_NAMES);
   const list = raw

@@ -16,9 +16,9 @@ describe('Graph Builder', () => {
   const logger = createLogger({ jsonMode: true, quiet: true, verbose: false, command: 'test' });
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `vibeguard-graph-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    testDir = join(tmpdir(), `codescout-graph-${Date.now()}-${Math.random().toString(36).slice(2)}`);
     await mkdir(join(testDir, 'src'), { recursive: true });
-    await mkdir(join(testDir, '.vibeguard'), { recursive: true });
+    await mkdir(join(testDir, '.codescout'), { recursive: true });
     await writeFile(join(testDir, 'tsconfig.json'), TSCONFIG, 'utf-8');
     config = await loadConfig(testDir);
   });

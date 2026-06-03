@@ -10,7 +10,7 @@ describe('Security Scanner', () => {
   let testDir: string;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `vibeguard-sec-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    testDir = join(tmpdir(), `codescout-sec-${Date.now()}-${Math.random().toString(36).slice(2)}`);
     await mkdir(join(testDir, 'src'), { recursive: true });
   });
 
@@ -130,9 +130,9 @@ describe('Security Scanner', () => {
       'utf-8'
     );
 
-    await mkdir(join(testDir, '.vibeguard'), { recursive: true });
+    await mkdir(join(testDir, '.codescout'), { recursive: true });
     await writeFile(
-      join(testDir, '.vibeguard', 'config.json'),
+      join(testDir, '.codescout', 'config.json'),
       JSON.stringify({
         ...DEFAULT_CONFIG,
         security: { customSecretPatterns: ['CUSTOM_SECRET_\\d+'] },

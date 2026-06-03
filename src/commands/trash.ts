@@ -1,5 +1,5 @@
 import { TrashStoreImpl } from '../storage/trash-store.js';
-import { VibeguardError, ErrorCodes } from '../utils/errors.js';
+import { CodeScoutError, ErrorCodes } from '../utils/errors.js';
 import { emitJson } from '../utils/json-output.js';
 import { header, statusIcon, filePath, brand } from '../utils/ui.js';
 import type { CommandContext } from '../context.js';
@@ -47,9 +47,9 @@ export async function runTrash(ctx: CommandContext, opts: TrashCommandOptions): 
 
     case 'restore': {
       if (!opts.target) {
-        throw new VibeguardError(
+        throw new CodeScoutError(
           ErrorCodes.CONFIG_INVALID,
-          'Restore requires an ID or path. Usage: vibeguard trash restore <id|path>',
+          'Restore requires an ID or path. Usage: codescout trash restore <id|path>',
         );
       }
 
@@ -61,7 +61,7 @@ export async function runTrash(ctx: CommandContext, opts: TrashCommandOptions): 
           process.stdout.write(`\n  ${statusIcon('success')} ${brand.success('Restored:')} ${filePath(opts.target)}\n\n`);
         }
       } catch (err) {
-        throw new VibeguardError(
+        throw new CodeScoutError(
           ErrorCodes.RESTORE_CONFLICT,
           err instanceof Error ? err.message : 'Restore failed',
         );
@@ -71,7 +71,7 @@ export async function runTrash(ctx: CommandContext, opts: TrashCommandOptions): 
 
     case 'purge': {
       if (!opts.yes) {
-        throw new VibeguardError(
+        throw new CodeScoutError(
           ErrorCodes.LIMIT_EXCEEDED,
           'Purge requires --yes flag to confirm deletion of all trash entries.',
         );
@@ -88,7 +88,7 @@ export async function runTrash(ctx: CommandContext, opts: TrashCommandOptions): 
     }
 
     default:
-      throw new VibeguardError(
+      throw new CodeScoutError(
         ErrorCodes.UNKNOWN_COMMAND,
         `Unknown trash action: "${opts.action}". Valid actions: list, restore, purge`,
       );

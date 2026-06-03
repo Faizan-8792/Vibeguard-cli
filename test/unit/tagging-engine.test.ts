@@ -10,10 +10,10 @@ describe('Tagging Engine', () => {
   let testDir: string;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `vibeguard-tag-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    testDir = join(tmpdir(), `codescout-tag-${Date.now()}-${Math.random().toString(36).slice(2)}`);
     await mkdir(join(testDir, 'src', 'components'), { recursive: true });
     await mkdir(join(testDir, 'pages', 'api'), { recursive: true });
-    await mkdir(join(testDir, '.vibeguard'), { recursive: true });
+    await mkdir(join(testDir, '.codescout'), { recursive: true });
   });
 
   afterEach(async () => {
@@ -51,10 +51,10 @@ describe('Tagging Engine', () => {
     expect(fileTags).toContain('route');
   });
 
-  it('parses @vibeguard: comments', async () => {
+  it('parses @codescout: comments', async () => {
     await writeFile(
       join(testDir, 'src', 'components', 'Button.tsx'),
-      '// @vibeguard: ui, design-system\nexport function Button() {}',
+      '// @codescout: ui, design-system\nexport function Button() {}',
       'utf-8'
     );
 
@@ -93,7 +93,7 @@ describe('Tagging Engine', () => {
   it('tags are sorted alphabetically and deduplicated', async () => {
     await writeFile(
       join(testDir, 'src', 'components', 'Button.tsx'),
-      '// @vibeguard: button, component\nexport function Button() {}',
+      '// @codescout: button, component\nexport function Button() {}',
       'utf-8'
     );
 

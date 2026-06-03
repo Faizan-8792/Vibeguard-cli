@@ -12,9 +12,9 @@ import { FileStoreImpl } from '../storage/file-store.js';
  * faster to read. Savings figures here are honest prose-only estimates, not a
  * billing-grade guarantee — see `estimatedSavingsPct`.
  *
- * VibeGuard wires this in natively: enabling caveman writes an always-on
+ * CodeScout wires this in natively: enabling caveman writes an always-on
  * steering/rule file for the AI assistant so EVERY chat answers caveman-style
- * until the user turns it off. State is local-only, stored in `.vibeguard/`.
+ * until the user turns it off. State is local-only, stored in `.codescout/`.
  */
 
 export type CavemanLevel = 'lite' | 'full' | 'ultra';
@@ -23,7 +23,7 @@ export const CAVEMAN_LEVELS: readonly CavemanLevel[] = ['lite', 'full', 'ultra']
 export const CAVEMAN_SCHEMA_VERSION = '1.0.0';
 export const DEFAULT_CAVEMAN_LEVEL: CavemanLevel = 'full';
 
-/** Persisted caveman state (local-only, lives in `.vibeguard/caveman.json`). */
+/** Persisted caveman state (local-only, lives in `.codescout/caveman.json`). */
 export interface CavemanState {
   schemaVersion: string;
   enabled: boolean;
@@ -44,7 +44,7 @@ export function defaultCavemanState(): CavemanState {
   };
 }
 
-/** Load caveman state from `.vibeguard/caveman.json`, falling back to defaults. */
+/** Load caveman state from `.codescout/caveman.json`, falling back to defaults. */
 export async function loadCavemanState(projectRoot: string): Promise<CavemanState> {
   const store = new FileStoreImpl(projectRoot);
   const raw = await store.read<Partial<CavemanState>>(STATE_FILE);
@@ -59,7 +59,7 @@ export async function loadCavemanState(projectRoot: string): Promise<CavemanStat
   };
 }
 
-/** Persist caveman state to `.vibeguard/caveman.json`. */
+/** Persist caveman state to `.codescout/caveman.json`. */
 export async function saveCavemanState(projectRoot: string, state: CavemanState): Promise<void> {
   const store = new FileStoreImpl(projectRoot);
   await store.write(STATE_FILE, state);
@@ -120,7 +120,7 @@ export function levelDescription(level: CavemanLevel): string {
  * gets embedded into each agent's always-on rule file so every reply is terse.
  */
 export function cavemanRuleBody(level: CavemanLevel): string {
-  return `# VibeGuard Caveman Mode — ACTIVE (level: ${level})
+  return `# CodeScout Caveman Mode — ACTIVE (level: ${level})
 
 "Why use many token when few do trick." Respond terse like a smart caveman.
 All technical substance stays. Only filler dies. Brain big, mouth small.
@@ -171,7 +171,7 @@ chat *explanation* around them, not the artifacts themselves.
 export function buildKiroSteering(level: CavemanLevel): string {
   return `---
 inclusion: always
-description: VibeGuard Caveman Mode — terse, token-saving replies on every turn (level: ${level})
+description: CodeScout Caveman Mode — terse, token-saving replies on every turn (level: ${level})
 ---
 ${cavemanRuleBody(level)}
 `;
@@ -180,7 +180,7 @@ ${cavemanRuleBody(level)}
 /** Cursor rule file content (always applied). */
 export function buildCursorRule(level: CavemanLevel): string {
   return `---
-description: VibeGuard Caveman Mode — ultra-compressed replies
+description: CodeScout Caveman Mode — ultra-compressed replies
 alwaysApply: true
 ---
 ${cavemanRuleBody(level)}
@@ -196,7 +196,7 @@ export function buildPlainRule(level: CavemanLevel): string {
 export function buildWindsurfRule(level: CavemanLevel): string {
   return `---
 trigger: always_on
-description: VibeGuard Caveman Mode — terse, token-saving replies (level: ${level})
+description: CodeScout Caveman Mode — terse, token-saving replies (level: ${level})
 ---
 ${cavemanRuleBody(level)}
 `;
@@ -217,13 +217,13 @@ export function estimatedSavingsPct(level: CavemanLevel): number {
 // ---------------------------------------------------------------------------
 
 /** Marker fences for injecting/removing the block in shared memory files. */
-export const CAVEMAN_BEGIN_MARK = '<!-- vibeguard-caveman:begin -->';
-export const CAVEMAN_END_MARK = '<!-- vibeguard-caveman:end -->';
+export const CAVEMAN_BEGIN_MARK = '<!-- codescout-caveman:begin -->';
+export const CAVEMAN_END_MARK = '<!-- codescout-caveman:end -->';
 
-/** Relative paths VibeGuard may write caveman rules into. */
-export const CAVEMAN_KIRO_STEERING_REL = join('.kiro', 'steering', 'vibeguard-caveman.md');
-export const CAVEMAN_CURSOR_RULE_REL = join('.cursor', 'rules', 'vibeguard-caveman.mdc');
-export const CAVEMAN_WINDSURF_RULE_REL = join('.windsurf', 'rules', 'vibeguard-caveman.md');
+/** Relative paths CodeScout may write caveman rules into. */
+export const CAVEMAN_KIRO_STEERING_REL = join('.kiro', 'steering', 'codescout-caveman.md');
+export const CAVEMAN_CURSOR_RULE_REL = join('.cursor', 'rules', 'codescout-caveman.mdc');
+export const CAVEMAN_WINDSURF_RULE_REL = join('.windsurf', 'rules', 'codescout-caveman.md');
 const CLAUDE_REL = 'CLAUDE.md';
 const COPILOT_REL = join('.github', 'copilot-instructions.md');
 const GEMINI_REL = join('.gemini', 'CONTEXT.md');
@@ -235,8 +235,8 @@ const AGENTS_REL = 'AGENTS.md';
  * Memory/instruction files that are CREATED if missing and then receive a
  * marker-fenced caveman block. These are the canonical always-on instruction
  * files each agent reads, so creating them is what makes Caveman Mode work in
- * every IDE without a prior `vibeguard install`. On disable, the block is
- * stripped; if VibeGuard created the file (nothing else in it), it is removed.
+ * every IDE without a prior `codescout install`. On disable, the block is
+ * stripped; if CodeScout created the file (nothing else in it), it is removed.
  */
 const CREATE_MEMORY_FILES = [CLAUDE_REL, COPILOT_REL, GEMINI_REL, AGENTS_REL];
 
@@ -280,7 +280,7 @@ async function injectMarkerBlock(filePath: string, body: string): Promise<void> 
 
 /**
  * Strip the caveman block from a marker-folded file. If, after stripping, the
- * file contains nothing but whitespace (i.e. VibeGuard created it), the file is
+ * file contains nothing but whitespace (i.e. CodeScout created it), the file is
  * deleted so disabling leaves no empty litter. Returns true if anything changed.
  */
 async function stripMarkerBlock(filePath: string): Promise<boolean> {
@@ -304,7 +304,7 @@ async function stripMarkerBlock(filePath: string): Promise<boolean> {
 
 /**
  * Write the always-on caveman rule into every major IDE/agent integration so
- * the mode works everywhere without a prior `vibeguard install`. Per-IDE rule
+ * the mode works everywhere without a prior `codescout install`. Per-IDE rule
  * files (Kiro, Cursor, Windsurf) are CREATED unconditionally; the cross-tool
  * memory files (CLAUDE.md, Copilot, Gemini, AGENTS.md) are created if missing
  * and folded into via a marker block; legacy single-file formats are only

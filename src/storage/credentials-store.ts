@@ -91,7 +91,7 @@ export class CredentialsStore {
   private readonly filePath: string;
 
   constructor(projectRoot: string) {
-    this.filePath = join(projectRoot, '.vibeguard', 'credentials.json');
+    this.filePath = join(projectRoot, '.codescout', 'credentials.json');
   }
 
   async load(): Promise<LLMCredentials | null> {
@@ -116,7 +116,7 @@ export class CredentialsStore {
   }
 
   /**
-   * Resolve credentials. Precedence: stored file > VIBEGUARD_API_KEY env.
+   * Resolve credentials. Precedence: stored file > CODESCOUT_API_KEY env.
    */
   async resolve(): Promise<LLMCredentials | null> {
     const stored = await this.load();
@@ -137,18 +137,18 @@ export class CredentialsStore {
 }
 
 /**
- * Build credentials from VIBEGUARD_* environment variables, or null when unset.
+ * Build credentials from CODESCOUT_* environment variables, or null when unset.
  */
 function resolveCredentialsFromEnv(): LLMCredentials | null {
-  const apiKey = process.env['VIBEGUARD_API_KEY'];
+  const apiKey = process.env['CODESCOUT_API_KEY'];
   if (!apiKey) return null;
 
-  const provider = (process.env['VIBEGUARD_PROVIDER'] as LLMProvider | undefined) ?? inferProvider(apiKey);
+  const provider = (process.env['CODESCOUT_PROVIDER'] as LLMProvider | undefined) ?? inferProvider(apiKey);
   const defaults = PROVIDER_DEFAULTS[provider];
   return {
     provider,
     apiKey,
-    model: process.env['VIBEGUARD_MODEL'] ?? defaults.model,
-    baseUrl: process.env['VIBEGUARD_BASE_URL'] ?? defaults.baseUrl,
+    model: process.env['CODESCOUT_MODEL'] ?? defaults.model,
+    baseUrl: process.env['CODESCOUT_BASE_URL'] ?? defaults.baseUrl,
   };
 }

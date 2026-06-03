@@ -1,4 +1,4 @@
 .env
 .env.local
-.vibeguard/
-.vibeguard-trash/
+.codescout/
+.codescout-trash/

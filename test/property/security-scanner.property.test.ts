@@ -14,7 +14,7 @@ describe('Property 11: Secret Pattern Detection', () => {
         async (suffix) => {
           const key = `sk-${suffix}`;
           const dir = await mkdtemp(join(tmpdir(), 'vg-sec-'));
-          await mkdir(join(dir, '.vibeguard'), { recursive: true });
+          await mkdir(join(dir, '.codescout'), { recursive: true });
           await writeFile(join(dir, 'config.ts'), `const apiKey = "${key}";`, 'utf-8');
 
           const config = await loadConfig(dir);
@@ -37,7 +37,7 @@ describe('Property 11: Secret Pattern Detection', () => {
         async (suffix) => {
           const key = `AKIA${suffix}`;
           const dir = await mkdtemp(join(tmpdir(), 'vg-sec-'));
-          await mkdir(join(dir, '.vibeguard'), { recursive: true });
+          await mkdir(join(dir, '.codescout'), { recursive: true });
           await writeFile(join(dir, 'aws.ts'), `const key = "${key}";`, 'utf-8');
 
           const config = await loadConfig(dir);
@@ -57,7 +57,7 @@ describe('Property 11: Secret Pattern Detection', () => {
 describe('Property 12: Security Issue ID Stability', () => {
   it('same content produces same issue ID across runs', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'vg-sec-'));
-    await mkdir(join(dir, '.vibeguard'), { recursive: true });
+    await mkdir(join(dir, '.codescout'), { recursive: true });
     await writeFile(join(dir, 'secret.ts'), 'const key = "sk-abcdefghijklmnopqrstuvwxyz";', 'utf-8');
 
     const config = await loadConfig(dir);
@@ -76,7 +76,7 @@ describe('Property 12: Security Issue ID Stability', () => {
 describe('Property 13: Framework Misuse Detection', () => {
   it('detects cors wildcard origin', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'vg-sec-'));
-    await mkdir(join(dir, '.vibeguard'), { recursive: true });
+    await mkdir(join(dir, '.codescout'), { recursive: true });
     await writeFile(join(dir, 'server.ts'), `app.use(cors({ origin: '*' }));`, 'utf-8');
 
     const config = await loadConfig(dir);
@@ -91,7 +91,7 @@ describe('Property 13: Framework Misuse Detection', () => {
 
   it('detects cors without config', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'vg-sec-'));
-    await mkdir(join(dir, '.vibeguard'), { recursive: true });
+    await mkdir(join(dir, '.codescout'), { recursive: true });
     await writeFile(join(dir, 'server.ts'), `app.use(cors());`, 'utf-8');
 
     const config = await loadConfig(dir);

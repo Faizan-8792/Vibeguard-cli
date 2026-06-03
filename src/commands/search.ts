@@ -1,5 +1,5 @@
 import type { CommandContext } from '../context.js';
-import { VibeguardError, ErrorCodes } from '../utils/errors.js';
+import { CodeScoutError, ErrorCodes } from '../utils/errors.js';
 import { emitJson } from '../utils/json-output.js';
 import { header, keyValue, divider, statusIcon, filePath, brand } from '../utils/ui.js';
 
@@ -30,7 +30,7 @@ export async function runSearch(ctx: CommandContext, opts: SearchCommandOptions)
   const query = opts.query?.trim() ?? '';
 
   if (query.length === 0) {
-    throw new VibeguardError(ErrorCodes.CONFIG_INVALID, 'Search query is required. Usage: vibeguard search "<query>"');
+    throw new CodeScoutError(ErrorCodes.CONFIG_INVALID, 'Search query is required. Usage: codescout search "<query>"');
   }
 
   const { loadGraph } = await import('../engines/graph-builder.js');
@@ -39,7 +39,7 @@ export async function runSearch(ctx: CommandContext, opts: SearchCommandOptions)
 
   const graph = await loadGraph(projectRoot);
   if (!graph) {
-    throw new VibeguardError(ErrorCodes.CONFIG_NOT_FOUND, 'No graph found. Run `vibeguard map` first.');
+    throw new CodeScoutError(ErrorCodes.CONFIG_NOT_FOUND, 'No graph found. Run `codescout map` first.');
   }
 
   if (!options.json) logger.startSpinner(`Searching for "${query}"...`);
@@ -113,7 +113,7 @@ export async function runSearch(ctx: CommandContext, opts: SearchCommandOptions)
   output.push('');
 
   if (results.length === 0) {
-    output.push(`  ${statusIcon('info')} ${brand.muted('No matches found. Try different terms or run `vibeguard map` to refresh the index.')}`);
+    output.push(`  ${statusIcon('info')} ${brand.muted('No matches found. Try different terms or run `codescout map` to refresh the index.')}`);
     process.stdout.write(output.join('\n') + '\n');
     return;
   }

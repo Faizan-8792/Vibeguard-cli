@@ -40,7 +40,7 @@ function percentReduction(part: number, whole: number): number {
 
 /**
  * Benchmark token usage: a traditional assistant reads whole files to answer
- * a codebase question, whereas VibeGuard reads only the compact graph + a
+ * a codebase question, whereas CodeScout reads only the compact graph + a
  * targeted node neighborhood. This quantifies the reduction.
  */
 export async function runBenchmark(ctx: CommandContext, opts: BenchmarkCommandOptions): Promise<void> {
@@ -92,7 +92,7 @@ async function measure(
     }
   }
 
-  // VibeGuard: read the compact graph.json once.
+  // CodeScout: read the compact graph.json once.
   const graphReadTokens = estimateTokens(JSON.stringify(graph).length, charsPerToken);
 
   // Typical query: graph + a small file neighborhood (vs reading all files).
@@ -118,7 +118,7 @@ function emitBenchmarkJson(r: BenchmarkResult): void {
     files: r.readableFiles,
     charsPerToken: r.charsPerToken,
     baseline: { fullReadTokens: r.fullReadTokens, avgFileTokens: r.avgFileTokens },
-    vibeguard: { graphBuildTokens: 0, graphReadTokens: r.graphReadTokens, typicalQueryTokens: r.queryTokens },
+    codescout: { graphBuildTokens: 0, graphReadTokens: r.graphReadTokens, typicalQueryTokens: r.queryTokens },
     reduction: {
       graphVsFullRead: `${r.graphReadReduction}%`,
       queryVsFullRead: `${r.queryReduction}%`,
@@ -137,7 +137,7 @@ function renderBenchmarkReport(r: BenchmarkResult): string {
   out.push(`  ${brand.primary.bold('Baseline (read every file):')}`);
   out.push(keyValue('  Full-read tokens', brand.danger(`~${r.fullReadTokens.toLocaleString()}`)));
   out.push('');
-  out.push(`  ${brand.primary.bold('VibeGuard (graph-based):')}`);
+  out.push(`  ${brand.primary.bold('CodeScout (graph-based):')}`);
   out.push(keyValue('  Graph build cost', brand.success('0 tokens (local)')));
   out.push(keyValue('  Graph read', brand.info(`~${r.graphReadTokens.toLocaleString()}`)));
   out.push(keyValue('  Typical query', brand.info(`~${r.queryTokens.toLocaleString()}`)));
@@ -146,7 +146,7 @@ function renderBenchmarkReport(r: BenchmarkResult): string {
   out.push(keyValue('Query reduction', brand.success.bold(`${r.queryReduction}% fewer tokens`)));
   out.push(keyValue('Reduction factor', brand.success.bold(`${r.reductionFactor}x`)));
   out.push('');
-  out.push(`  ${statusIcon('success')} ${brand.muted('Graphify charges ~5,000-50,000 tokens to build a graph. VibeGuard: 0.')}`);
+  out.push(`  ${statusIcon('success')} ${brand.muted('Graphify charges ~5,000-50,000 tokens to build a graph. CodeScout: 0.')}`);
   out.push('');
   return out.join('\n');
 }

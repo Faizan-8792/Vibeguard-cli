@@ -19,7 +19,7 @@ export interface AIAdvisorResult {
   model: string;
 }
 
-const SYSTEM_PROMPT = `You are VibeGuard's senior application-security auditor. You receive a compact summary of a codebase's static-analysis findings plus small, security-relevant code excerpts.
+const SYSTEM_PROMPT = `You are CodeScout's senior application-security auditor. You receive a compact summary of a codebase's static-analysis findings plus small, security-relevant code excerpts.
 
 Your job:
 1. Confirm or refine the reported attack risks (DDoS, brute-force, OTP abuse, SQLi, XSS, CSRF, SSRF, command/code injection, path traversal, weak crypto, etc.).

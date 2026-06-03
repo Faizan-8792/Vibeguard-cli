@@ -12,7 +12,7 @@ export interface FileStore {
 export class FileStoreImpl implements FileStore {
   private readonly basePath: string;
 
-  constructor(projectRoot: string, baseDir = '.vibeguard') {
+  constructor(projectRoot: string, baseDir = '.codescout') {
     this.basePath = join(projectRoot, baseDir);
   }
 

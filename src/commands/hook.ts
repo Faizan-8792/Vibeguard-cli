@@ -1,7 +1,7 @@
 import { readFile, writeFile, chmod, rm, access } from 'node:fs/promises';
 import { join } from 'node:path';
 import { header, statusIcon, brand } from '../utils/ui.js';
-import { VibeguardError, ErrorCodes } from '../utils/errors.js';
+import { CodeScoutError, ErrorCodes } from '../utils/errors.js';
 import { emitJson } from '../utils/json-output.js';
 import type { CommandContext } from '../context.js';
 
@@ -11,12 +11,12 @@ export interface HookCommandOptions {
 
 // Pre-commit hook script (cross-platform sh + node for JSON parsing)
 const PRE_COMMIT_HOOK = `#!/bin/sh
-# VibeGuard Pre-Commit Security Hook
+# CodeScout Pre-Commit Security Hook
 # Scans for secrets and vulnerabilities before each commit.
 # To bypass: git commit --no-verify
 
 # Run security scan
-RESULT=$(node ./node_modules/.bin/../vibeguard-cli/dist/cli.js security --json 2>/dev/null || npx vibeguard-cli security --json 2>/dev/null)
+RESULT=$(node ./node_modules/.bin/../codescout-cli/dist/cli.js security --json 2>/dev/null || npx codescout-cli security --json 2>/dev/null)
 
 if [ -z "$RESULT" ]; then
   exit 0
@@ -43,27 +43,27 @@ if echo "$BLOCK" | grep -q "^BLOCK:"; then
   CRITICAL=$(echo "$BLOCK" | cut -d: -f2)
   HIGH=$(echo "$BLOCK" | cut -d: -f3)
   echo ""
-  echo "❌ VibeGuard: COMMIT BLOCKED"
+  echo "❌ CodeScout: COMMIT BLOCKED"
   echo ""
   echo "   Found: $CRITICAL critical, $HIGH high severity issues"
   echo ""
-  echo "   Run: npx vibeguard-cli --scan    (to see details)"
-  echo "   Fix: npx vibeguard-cli security --fix gitignore"
-  echo "        npx vibeguard-cli security --fix env"
+  echo "   Run: npx codescout-cli --scan    (to see details)"
+  echo "   Fix: npx codescout-cli security --fix gitignore"
+  echo "        npx codescout-cli security --fix env"
   echo ""
   echo "   Bypass: git commit --no-verify"
   echo ""
   exit 1
 fi
 
-echo "✅ VibeGuard: Security check passed."
+echo "✅ CodeScout: Security check passed."
 exit 0
 `;
 
 // Post-commit hook script: auto-updates the dependency graph after each commit.
 // Code changes rebuild instantly; doc-only changes print a notify message.
 const POST_COMMIT_HOOK = `#!/bin/sh
-# VibeGuard Post-Commit Graph Auto-Update
+# CodeScout Post-Commit Graph Auto-Update
 # Rebuilds the dependency graph after each commit (local, 0 tokens).
 # To bypass: git commit --no-verify
 
@@ -74,10 +74,10 @@ CODE=$(echo "$CHANGED" | grep -E '\\.(ts|tsx|js|jsx|mjs|cjs|py|pyw|go|java)$' ||
 DOCS=$(echo "$CHANGED" | grep -E '\\.(md|mdx)$' || true)
 
 if [ -n "$CODE" ]; then
-  echo "🔄 VibeGuard: code changed, rebuilding graph..."
-  (node ./node_modules/vibeguard-cli/dist/cli.js map --quiet 2>/dev/null || npx vibeguard-cli map --quiet 2>/dev/null) &
+  echo "🔄 CodeScout: code changed, rebuilding graph..."
+  (node ./node_modules/codescout-cli/dist/cli.js map --quiet 2>/dev/null || npx codescout-cli map --quiet 2>/dev/null) &
 elif [ -n "$DOCS" ]; then
-  echo "📝 VibeGuard: docs changed. Run 'vibeguard map' to refresh doc links."
+  echo "📝 CodeScout: docs changed. Run 'codescout map' to refresh doc links."
 fi
 
 exit 0
@@ -103,7 +103,7 @@ export async function runHook(ctx: CommandContext, opts: HookCommandOptions): Pr
       await uninstallPostCommitHook(projectRoot, options.json);
       break;
     default:
-      throw new VibeguardError(
+      throw new CodeScoutError(
         ErrorCodes.UNKNOWN_COMMAND,
         `Unknown hook action: "${opts.action}". Valid: install, uninstall, status, graph-install, graph-uninstall`,
       );
@@ -117,7 +117,7 @@ async function installHook(projectRoot: string, json: boolean): Promise<void> {
   try {
     await access(join(projectRoot, '.git'));
   } catch {
-    throw new VibeguardError(
+    throw new CodeScoutError(
       ErrorCodes.GIT_UNAVAILABLE,
       'No .git directory found. Initialize a git repo first: git init',
     );
@@ -131,10 +131,10 @@ async function installHook(projectRoot: string, json: boolean): Promise<void> {
     // doesn't exist — fine
   }
 
-  if (existingHook && !existingHook.includes('VibeGuard')) {
-    throw new VibeguardError(
+  if (existingHook && !existingHook.includes('CodeScout')) {
+    throw new CodeScoutError(
       ErrorCodes.ALREADY_EXISTS,
-      'A pre-commit hook already exists (not VibeGuard). Use --force or manually merge.',
+      'A pre-commit hook already exists (not CodeScout). Use --force or manually merge.',
     );
   }
 
@@ -160,8 +160,8 @@ async function installHook(projectRoot: string, json: boolean): Promise<void> {
     out.push(`    ${brand.secondary('•')} Bypass with: ${brand.muted('git commit --no-verify')}`);
     out.push('');
     out.push(`  ${brand.muted('Manage:')}`);
-    out.push(`    ${brand.secondary('vibeguard hook status')}      ${brand.muted('Check if active')}`);
-    out.push(`    ${brand.secondary('vibeguard hook uninstall')}   ${brand.muted('Remove the hook')}`);
+    out.push(`    ${brand.secondary('codescout hook status')}      ${brand.muted('Check if active')}`);
+    out.push(`    ${brand.secondary('codescout hook uninstall')}   ${brand.muted('Remove the hook')}`);
     out.push('');
     process.stdout.write(out.join('\n') + '\n');
   }
@@ -172,15 +172,15 @@ async function uninstallHook(projectRoot: string, json: boolean): Promise<void> 
 
   try {
     const content = await readFile(hookPath, 'utf-8');
-    if (!content.includes('VibeGuard')) {
-      throw new VibeguardError(
+    if (!content.includes('CodeScout')) {
+      throw new CodeScoutError(
         ErrorCodes.CONFIG_NOT_FOUND,
-        'Pre-commit hook exists but is not a VibeGuard hook. Not removing.',
+        'Pre-commit hook exists but is not a CodeScout hook. Not removing.',
       );
     }
     await rm(hookPath);
   } catch (err) {
-    if (err instanceof VibeguardError) throw err;
+    if (err instanceof CodeScoutError) throw err;
     // Hook doesn't exist
   }
 
@@ -197,7 +197,7 @@ async function hookStatus(projectRoot: string, json: boolean): Promise<void> {
   let installed = false;
   try {
     const content = await readFile(hookPath, 'utf-8');
-    installed = content.includes('VibeGuard');
+    installed = content.includes('CodeScout');
   } catch {
     // doesn't exist
   }
@@ -206,9 +206,9 @@ async function hookStatus(projectRoot: string, json: boolean): Promise<void> {
     emitJson({ installed, type: 'pre-commit' });
   } else {
     if (installed) {
-      process.stdout.write(`\n  ${statusIcon('success')} ${brand.success('VibeGuard pre-commit hook is active.')}\n\n`);
+      process.stdout.write(`\n  ${statusIcon('success')} ${brand.success('CodeScout pre-commit hook is active.')}\n\n`);
     } else {
-      process.stdout.write(`\n  ${statusIcon('info')} ${brand.muted('No VibeGuard hook installed.')} ${brand.secondary('Run: vibeguard hook install')}\n\n`);
+      process.stdout.write(`\n  ${statusIcon('info')} ${brand.muted('No CodeScout hook installed.')} ${brand.secondary('Run: codescout hook install')}\n\n`);
     }
   }
 }
@@ -219,7 +219,7 @@ async function installPostCommitHook(projectRoot: string, json: boolean): Promis
   try {
     await access(join(projectRoot, '.git'));
   } catch {
-    throw new VibeguardError(
+    throw new CodeScoutError(
       ErrorCodes.GIT_UNAVAILABLE,
       'No .git directory found. Initialize a git repo first: git init',
     );
@@ -232,10 +232,10 @@ async function installPostCommitHook(projectRoot: string, json: boolean): Promis
     // doesn't exist — fine
   }
 
-  if (existingHook && !existingHook.includes('VibeGuard')) {
-    throw new VibeguardError(
+  if (existingHook && !existingHook.includes('CodeScout')) {
+    throw new CodeScoutError(
       ErrorCodes.ALREADY_EXISTS,
-      'A post-commit hook already exists (not VibeGuard). Manually merge or remove it first.',
+      'A post-commit hook already exists (not CodeScout). Manually merge or remove it first.',
     );
   }
 
@@ -268,15 +268,15 @@ async function uninstallPostCommitHook(projectRoot: string, json: boolean): Prom
 
   try {
     const content = await readFile(hookPath, 'utf-8');
-    if (!content.includes('VibeGuard')) {
-      throw new VibeguardError(
+    if (!content.includes('CodeScout')) {
+      throw new CodeScoutError(
         ErrorCodes.CONFIG_NOT_FOUND,
-        'Post-commit hook exists but is not a VibeGuard hook. Not removing.',
+        'Post-commit hook exists but is not a CodeScout hook. Not removing.',
       );
     }
     await rm(hookPath);
   } catch (err) {
-    if (err instanceof VibeguardError) throw err;
+    if (err instanceof CodeScoutError) throw err;
     // Hook doesn't exist
   }
 

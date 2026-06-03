@@ -102,13 +102,13 @@ function renderReport(result: HealthResult, caveman: CavemanSummary, dependencie
     'Caveman Mode',
     caveman.enabled
       ? brand.success(`on (${caveman.level}, ~${caveman.estimatedSavingsPct}% output savings)`)
-      : brand.muted('off — enable with `vibeguard caveman on`'),
+      : brand.muted('off — enable with `codescout caveman on`'),
   ));
   // Dependency audit fold-in — quick supply-chain signal.
   output.push(keyValue(
     'Dependencies',
     dependencies.vulnerabilities > 0
-      ? brand.danger(`${dependencies.vulnerabilities} vulnerable`) + brand.muted(` / ${dependencies.total} total — run \`vibeguard audit\``)
+      ? brand.danger(`${dependencies.vulnerabilities} vulnerable`) + brand.muted(` / ${dependencies.total} total — run \`codescout audit\``)
       : brand.success(`${dependencies.total} scanned, 0 known-vulnerable`),
   ));
   output.push('');

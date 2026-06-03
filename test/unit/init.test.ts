@@ -12,7 +12,7 @@ describe('Init Command', () => {
   let config: ResolvedConfig;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `vibeguard-init-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    testDir = join(tmpdir(), `codescout-init-${Date.now()}-${Math.random().toString(36).slice(2)}`);
     await mkdir(testDir, { recursive: true });
     config = await loadConfig(testDir);
   });
@@ -30,10 +30,10 @@ describe('Init Command', () => {
     };
   }
 
-  it('creates .vibeguard/config.json with defaults', async () => {
+  it('creates .codescout/config.json with defaults', async () => {
     await runInit(makeCtx(), { force: false });
 
-    const configPath = join(testDir, '.vibeguard', 'config.json');
+    const configPath = join(testDir, '.codescout', 'config.json');
     const content = await readFile(configPath, 'utf-8');
     const written = JSON.parse(content);
 
@@ -53,14 +53,14 @@ describe('Init Command', () => {
     await runInit(makeCtx(), { force: false });
     await runInit(makeCtx(), { force: true }); // Should not throw
 
-    const configPath = join(testDir, '.vibeguard', 'config.json');
+    const configPath = join(testDir, '.codescout', 'config.json');
     await access(configPath); // Should exist
   });
 
-  it('creates .vibeguard/ directory', async () => {
+  it('creates .codescout/ directory', async () => {
     await runInit(makeCtx(), { force: false });
 
-    const dirPath = join(testDir, '.vibeguard');
+    const dirPath = join(testDir, '.codescout');
     await access(dirPath); // Should exist
   });
 });

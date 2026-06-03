@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 describe('Credentials Store', () => {
   it('saves and loads credentials', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'vg-cred-'));
-    await mkdir(join(dir, '.vibeguard'), { recursive: true });
+    await mkdir(join(dir, '.codescout'), { recursive: true });
     const store = new CredentialsStore(dir);
 
     await store.save({ provider: 'openrouter', apiKey: 'sk-or-test123', model: 'test-model', baseUrl: 'https://x/v1' });
@@ -30,7 +30,7 @@ describe('Credentials Store', () => {
 
   it('clears credentials', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'vg-cred-'));
-    await mkdir(join(dir, '.vibeguard'), { recursive: true });
+    await mkdir(join(dir, '.codescout'), { recursive: true });
     const store = new CredentialsStore(dir);
     await store.save({ provider: 'openai', apiKey: 'sk-test', model: 'gpt-4o-mini' });
     await store.clear();
@@ -58,12 +58,12 @@ describe('Credentials Store', () => {
 
   it('resolves from env var when no file', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'vg-cred-'));
-    process.env['VIBEGUARD_API_KEY'] = 'sk-or-env-test';
+    process.env['CODESCOUT_API_KEY'] = 'sk-or-env-test';
     const store = new CredentialsStore(dir);
     const resolved = await store.resolve();
     expect(resolved?.apiKey).toBe('sk-or-env-test');
     expect(resolved?.provider).toBe('openrouter');
-    delete process.env['VIBEGUARD_API_KEY'];
+    delete process.env['CODESCOUT_API_KEY'];
     await rm(dir, { recursive: true, force: true });
   });
 });

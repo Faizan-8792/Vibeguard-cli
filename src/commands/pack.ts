@@ -7,7 +7,7 @@ import { selectContext, type PackMode } from '../engines/context-radius-engine.j
 import { generateContextPackage } from '../engines/context-package-generator.js';
 import { estimateCost } from '../engines/cost-estimator.js';
 import { resolveFiles } from '../utils/glob-resolver.js';
-import { VibeguardError, ErrorCodes } from '../utils/errors.js';
+import { CodeScoutError, ErrorCodes } from '../utils/errors.js';
 import { emitJson } from '../utils/json-output.js';
 import { header, keyValue, divider, statusIcon, filePath, brand } from '../utils/ui.js';
 import type { CommandContext } from '../context.js';
@@ -29,7 +29,7 @@ export async function runPack(ctx: CommandContext, opts: PackCommandOptions): Pr
     try {
       task = await readFile(join(projectRoot, opts.taskFile), 'utf-8');
     } catch {
-      throw new VibeguardError(
+      throw new CodeScoutError(
         ErrorCodes.CONFIG_NOT_FOUND,
         `Task file not found: ${opts.taskFile}`,
       );
@@ -37,9 +37,9 @@ export async function runPack(ctx: CommandContext, opts: PackCommandOptions): Pr
   }
 
   if (!task || task.trim().length === 0) {
-    throw new VibeguardError(
+    throw new CodeScoutError(
       ErrorCodes.CONFIG_INVALID,
-      'No task provided. Use `vibeguard pack "task description"` or `--task-file <path>`.',
+      'No task provided. Use `codescout pack "task description"` or `--task-file <path>`.',
     );
   }
 
@@ -111,8 +111,8 @@ export async function runPack(ctx: CommandContext, opts: PackCommandOptions): Pr
       tokenEstimates: selectionResult.tokenEstimates,
       costEstimates: selectionResult.costEstimates,
       packagePaths: {
-        md: '.vibeguard/context-package.md',
-        json: '.vibeguard/context-package.json',
+        md: '.codescout/context-package.md',
+        json: '.codescout/context-package.json',
       },
       warnings: pkg.warnings,
     });
@@ -149,7 +149,7 @@ export async function runPack(ctx: CommandContext, opts: PackCommandOptions): Pr
       output.push('');
     }
 
-    output.push(`  ${statusIcon('success')} ${brand.success('Saved to')} ${brand.muted('.vibeguard/context-package.md')}`);
+    output.push(`  ${statusIcon('success')} ${brand.success('Saved to')} ${brand.muted('.codescout/context-package.md')}`);
     output.push('');
 
     process.stdout.write(output.join('\n') + '\n');

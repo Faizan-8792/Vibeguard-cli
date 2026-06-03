@@ -8,21 +8,21 @@ import type { LLMCredentials } from '../storage/credentials-store.js';
 
 /**
  * The canonical instruction text describing exactly how to produce the
- * `.vibeguard/graph.json` dependency map. Shared by:
+ * `.codescout/graph.json` dependency map. Shared by:
  *  - "Copy prompt for creating map" (paste into any coding agent with repo access)
  *  - "Generate map using LLM" (sent to the configured LLM)
  *
- * Encodes the precise output schema so any capable model returns a file VibeGuard
+ * Encodes the precise output schema so any capable model returns a file CodeScout
  * can render into the same interactive graph.html as the offline builder.
  */
 export function buildMapPrompt(fileList: string[]): string {
   const sample = fileList.slice(0, 400).join('\n');
   const more = fileList.length > 400 ? `\n…and ${fileList.length - 400} more files` : '';
 
-  return `You are building a precise dependency map of this codebase for VibeGuard.
+  return `You are building a precise dependency map of this codebase for CodeScout.
 
 GOAL
-Produce a single JSON file at \`.vibeguard/graph.json\` that maps how every source
+Produce a single JSON file at \`.codescout/graph.json\` that maps how every source
 file connects to every other source file via imports/requires/includes.
 
 HOW TO ANALYZE (per file, by language)
@@ -62,7 +62,7 @@ RULES
 - Do not invent files. Only use paths from the file list.
 - Output must be valid JSON parseable by JSON.parse.
 
-After writing \`.vibeguard/graph.json\`, run \`npx vibeguard-cli graph\` to render the
+After writing \`.codescout/graph.json\`, run \`npx codescout-cli graph\` to render the
 interactive HTML view from it.
 
 PROJECT FILES (${fileList.length} total)
@@ -170,7 +170,7 @@ export async function generateMapViaLLM(
   }
 
   const graphData = normalizeLLMGraph(parsed);
-  const graphPath = join(projectRoot, '.vibeguard', 'graph.json');
+  const graphPath = join(projectRoot, '.codescout', 'graph.json');
   await writeFile(graphPath, JSON.stringify(graphData, null, 2) + '\n', 'utf-8');
 
   const htmlPath = await generateHTMLGraph(projectRoot, graphData);

@@ -2,7 +2,7 @@ import { CredentialsStore, PROVIDER_DEFAULTS, LLM_PROVIDERS, inferProvider, type
 import { LLMClient } from '../engines/llm-provider.js';
 import { emitJson } from '../utils/json-output.js';
 import { header, statusIcon, brand, keyValue, divider } from '../utils/ui.js';
-import { VibeguardError, ErrorCodes } from '../utils/errors.js';
+import { CodeScoutError, ErrorCodes } from '../utils/errors.js';
 import type { CommandContext } from '../context.js';
 import type { Logger } from '../utils/logger.js';
 
@@ -42,7 +42,7 @@ export async function runConfig(ctx: CommandContext, opts: ConfigCommandOptions)
       listProviders(jsonMode);
       break;
     default:
-      throw new VibeguardError(
+      throw new CodeScoutError(
         ErrorCodes.UNKNOWN_COMMAND,
         `Unknown config action "${opts.action}". Valid: set-key, show, test, clear, providers`,
       );
@@ -64,7 +64,7 @@ async function setKey(
     const status = await new LLMClient(credentials).testConnection();
     if (!status.ok) {
       if (!jsonMode) logger.stopSpinner(false);
-      throw new VibeguardError(ErrorCodes.CONFIG_INVALID, `API key test failed: ${status.error}`);
+      throw new CodeScoutError(ErrorCodes.CONFIG_INVALID, `API key test failed: ${status.error}`);
     }
     if (!jsonMode) logger.stopSpinner(true);
     tested = true;
@@ -81,14 +81,14 @@ async function setKey(
   const out: string[] = [];
   out.push(header(CONFIG_HEADER_TITLE, CONFIG_HEADER_ICON));
   out.push('');
-  out.push(`  ${statusIcon('success')} ${brand.success('API key saved')} ${brand.muted('(.vibeguard/credentials.json, gitignored)')}`);
+  out.push(`  ${statusIcon('success')} ${brand.success('API key saved')} ${brand.muted('(.codescout/credentials.json, gitignored)')}`);
   out.push(keyValue('Provider', brand.info(credentials.provider)));
   out.push(keyValue('Model', brand.secondary(credentials.model)));
   if (tested) {
     out.push(keyValue('Connection', brand.success('✓ Verified')));
   }
   out.push('');
-  out.push(`  ${brand.muted('Now run:')} ${brand.secondary('vibeguard attack --ai')} ${brand.muted('for AI-powered deep scan')}`);
+  out.push(`  ${brand.muted('Now run:')} ${brand.secondary('codescout attack --ai')} ${brand.muted('for AI-powered deep scan')}`);
   out.push('');
   process.stdout.write(out.join('\n') + '\n');
 }
@@ -98,15 +98,15 @@ async function setKey(
  */
 function buildCredentials(opts: ConfigCommandOptions): LLMCredentials {
   if (!opts.value) {
-    throw new VibeguardError(
+    throw new CodeScoutError(
       ErrorCodes.CONFIG_INVALID,
-      'API key required. Usage: vibeguard config set-key <api-key> [--provider <name>] [--model <name>]',
+      'API key required. Usage: codescout config set-key <api-key> [--provider <name>] [--model <name>]',
     );
   }
 
   const provider: LLMProvider = (opts.provider as LLMProvider | undefined) ?? inferProvider(opts.value);
   if (!VALID_PROVIDERS.includes(provider)) {
-    throw new VibeguardError(
+    throw new CodeScoutError(
       ErrorCodes.CONFIG_INVALID,
       `Invalid provider "${provider}". Valid: ${VALID_PROVIDERS.join(', ')}`,
     );
@@ -121,13 +121,13 @@ function buildCredentials(opts: ConfigCommandOptions): LLMCredentials {
   };
 
   if (provider === 'custom' && !credentials.baseUrl) {
-    throw new VibeguardError(
+    throw new CodeScoutError(
       ErrorCodes.CONFIG_INVALID,
       'Custom provider requires --base-url. Example: --base-url https://my-llm.example.com/v1',
     );
   }
   if (provider === 'custom' && !credentials.model) {
-    throw new VibeguardError(ErrorCodes.CONFIG_INVALID, 'Custom provider requires --model.');
+    throw new CodeScoutError(ErrorCodes.CONFIG_INVALID, 'Custom provider requires --model.');
   }
 
   return credentials;
@@ -153,7 +153,7 @@ async function showConfig(store: CredentialsStore, jsonMode: boolean): Promise<v
   if (!creds) {
     out.push(`  ${statusIcon('info')} ${brand.muted('No LLM configured.')}`);
     out.push('');
-    out.push(`  ${brand.muted('Set one with:')} ${brand.secondary('vibeguard config set-key <api-key>')}`);
+    out.push(`  ${brand.muted('Set one with:')} ${brand.secondary('codescout config set-key <api-key>')}`);
   } else {
     out.push(keyValue('Provider', brand.info(creds.provider)));
     out.push(keyValue('Model', brand.secondary(creds.model)));
@@ -167,7 +167,7 @@ async function showConfig(store: CredentialsStore, jsonMode: boolean): Promise<v
 async function testConfig(store: CredentialsStore, jsonMode: boolean, logger: Logger): Promise<void> {
   const creds = await store.resolve();
   if (!creds) {
-    throw new VibeguardError(ErrorCodes.CONFIG_NOT_FOUND, 'No LLM configured. Run `vibeguard config set-key <key>` first.');
+    throw new CodeScoutError(ErrorCodes.CONFIG_NOT_FOUND, 'No LLM configured. Run `codescout config set-key <key>` first.');
   }
 
   if (!jsonMode) logger.startSpinner(`Testing connection to ${creds.provider} (${creds.model})...`);
@@ -213,8 +213,8 @@ function listProviders(jsonMode: boolean): void {
   }
   out.push(divider());
   out.push('');
-  out.push(`  ${brand.muted('Set a key:')} ${brand.secondary('vibeguard config set-key <key> --provider <name>')}`);
-  out.push(`  ${brand.muted('Custom:')} ${brand.secondary('vibeguard config set-key <key> --provider custom --base-url <url> --model <name>')}`);
+  out.push(`  ${brand.muted('Set a key:')} ${brand.secondary('codescout config set-key <key> --provider <name>')}`);
+  out.push(`  ${brand.muted('Custom:')} ${brand.secondary('codescout config set-key <key> --provider custom --base-url <url> --model <name>')}`);
   out.push('');
   process.stdout.write(out.join('\n') + '\n');
 }
@@ -236,9 +236,9 @@ async function ensureGitignore(projectRoot: string): Promise<void> {
     // No gitignore yet
   }
 
-  const required = ['.vibeguard/credentials.json'];
+  const required = ['.codescout/credentials.json'];
   const existing = content.split('\n').map((l) => l.trim());
-  const toAdd = required.filter((r) => !existing.includes(r) && !existing.includes('.vibeguard/'));
+  const toAdd = required.filter((r) => !existing.includes(r) && !existing.includes('.codescout/'));
 
   if (toAdd.length > 0) {
     const newContent = content.length === 0 || content.endsWith('\n')

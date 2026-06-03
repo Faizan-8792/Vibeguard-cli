@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛡️ VibeGuard
+# 🛡️ CodeScout
 
 ### Your codebase, understood — by your AI and by you
 
@@ -9,7 +9,7 @@
 
 <br/>
 
-[![npm](https://img.shields.io/npm/v/vibeguard-cli?style=for-the-badge&color=22c55e&logo=npm)](https://www.npmjs.com/package/vibeguard-cli)
+[![npm](https://img.shields.io/npm/v/codescout-cli?style=for-the-badge&color=22c55e&logo=npm)](https://www.npmjs.com/package/codescout-cli)
 [![Node.js >=18](https://img.shields.io/badge/Node.js-%3E%3D18-22c55e?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Tests](https://img.shields.io/badge/tests-388%20passing-16a34a?style=for-the-badge)](#-development)
 [![License: MIT](https://img.shields.io/badge/license-MIT-f59e0b?style=for-the-badge)](LICENSE)
@@ -30,15 +30,15 @@
 
 ## 🚀 Step 1 — Install
 
-The npm package is **`vibeguard-cli`**; the command it gives you is **`vibeguard`**.
+The npm package is **`codescout-cli`**; the command it gives you is **`codescout`**.
 
 ```bash
-# Option A — install once, globally (then `vibeguard` works anywhere)
-npm install -g vibeguard-cli
-vibeguard --run
+# Option A — install once, globally (then `codescout` works anywhere)
+npm install -g codescout-cli
+codescout --run
 
 # Option B — run without installing
-npx vibeguard-cli --run
+npx codescout-cli --run
 ```
 
 Requirements: **Node.js ≥ 18**. Git is optional (enables hooks + git-aware scoring).
@@ -46,34 +46,34 @@ Requirements: **Node.js ≥ 18**. Git is optional (enables hooks + git-aware sco
 ### Wire it into your editor (one-shot)
 
 Pick your editor and run one command. Each install writes the right integration file
-(rules / instructions / MCP config), creates `.vibeguard/config.json`, enables **Caveman Mode**
+(rules / instructions / MCP config), creates `.codescout/config.json`, enables **Caveman Mode**
 + **GraphMode**, and offers to build the dependency map — all in a single pass.
 
 | Editor / Agent | One-shot install command | What it sets up |
 | --- | --- | --- |
-| **Antigravity** | `npx vibeguard-cli antigravity install` | `AGENTS.md` rules + `.antigravity/mcp.json` MCP server |
-| **VS Code** | `npx vibeguard-cli vscode install` | `.github/copilot-instructions.md` + `.vscode/mcp.json` MCP server |
-| **Kiro** | `npx vibeguard-cli kiro install` | `.kiro/skills/vibeguard/` skill + steering + `.kiro/settings/mcp.json` |
-| **Cursor** | `npx vibeguard-cli cursor install` | `.cursor/rules/vibeguard.mdc` always-on rule + `.cursor/mcp.json` |
-| **Claude Code** | `npx vibeguard-cli claude install` | `CLAUDE.md` integration section |
-| **GitHub Copilot** | `npx vibeguard-cli copilot install` | `.github/copilot-instructions.md` |
-| **Gemini** | `npx vibeguard-cli gemini install` | `.gemini/CONTEXT.md` + `.gemini/settings.json` |
-| **Aider** | `npx vibeguard-cli aider install` | `.aider.context.md` (+ `.aider.conf.yml` if absent) |
+| **Antigravity** | `npx codescout-cli antigravity install` | `AGENTS.md` rules + `.antigravity/mcp.json` MCP server |
+| **VS Code** | `npx codescout-cli vscode install` | `.github/copilot-instructions.md` + `.vscode/mcp.json` MCP server |
+| **Kiro** | `npx codescout-cli kiro install` | `.kiro/skills/codescout/` skill + steering + `.kiro/settings/mcp.json` |
+| **Cursor** | `npx codescout-cli cursor install` | `.cursor/rules/codescout.mdc` always-on rule + `.cursor/mcp.json` |
+| **Claude Code** | `npx codescout-cli claude install` | `CLAUDE.md` integration section |
+| **GitHub Copilot** | `npx codescout-cli copilot install` | `.github/copilot-instructions.md` |
+| **Gemini** | `npx codescout-cli gemini install` | `.gemini/CONTEXT.md` + `.gemini/settings.json` |
+| **Aider** | `npx codescout-cli aider install` | `.aider.context.md` (+ `.aider.conf.yml` if absent) |
 
 Generic form + opt-outs:
 
 ```bash
 # Any platform
-npx vibeguard-cli install --platform <kiro|cursor|claude|copilot|vscode|codex|gemini|aider|antigravity>
+npx codescout-cli install --platform <kiro|cursor|claude|copilot|vscode|codex|gemini|aider|antigravity>
 
 # Lean install (skip a step)
-npx vibeguard-cli install --platform vscode --no-caveman   # skip Caveman Mode
-npx vibeguard-cli install --platform vscode --no-map       # skip the graph build
-npx vibeguard-cli install --platform kiro --caveman ultra  # pick a Caveman level
+npx codescout-cli install --platform vscode --no-caveman   # skip Caveman Mode
+npx codescout-cli install --platform vscode --no-map       # skip the graph build
+npx codescout-cli install --platform kiro --caveman ultra  # pick a Caveman level
 ```
 
 > **After install, reload your editor / start a new chat** so it picks up the new rule + MCP server.
-> Remove anytime with `npx vibeguard-cli <platform> uninstall` — your `.vibeguard/` data is preserved.
+> Remove anytime with `npx codescout-cli <platform> uninstall` — your `.codescout/` data is preserved.
 
 ---
 
@@ -82,8 +82,8 @@ npx vibeguard-cli install --platform kiro --caveman ultra  # pick a Caveman leve
 The fastest way to use everything is the interactive menu:
 
 ```bash
-vibeguard --run          # if installed globally
-npx vibeguard-cli --run  # otherwise
+codescout --run          # if installed globally
+npx codescout-cli --run  # otherwise
 ```
 
 It opens a menu ordered for a fresh project — **Quick Setup** first, then the modes, then scans:
@@ -99,7 +99,7 @@ Health Check           — Project health score
 Dead Code Detection    — Find unused files & exports
 Context Package        — Generate AI context
 Trash Manager          — View soft-deleted files
-Initialize Config      — Setup .vibeguard/
+Initialize Config      — Setup .codescout/
 Configure LLM          — Add API key (OpenAI, Gemini, DeepSeek...)
 ```
 
@@ -109,24 +109,24 @@ to build the dependency map (see [GraphMode](#-graphmode--caveman-mode) below).
 Prefer flags? Every action has a one-line shortcut:
 
 ```bash
-npx vibeguard-cli --scan      # security scan
-npx vibeguard-cli --health    # project health score (0-100)
-npx vibeguard-cli --graph     # build + open the dependency graph
-npx vibeguard-cli --dead      # detect dead code
+npx codescout-cli --scan      # security scan
+npx codescout-cli --health    # project health score (0-100)
+npx codescout-cli --graph     # build + open the dependency graph
+npx codescout-cli --dead      # detect dead code
 ```
 
 ---
 
-## 💡 Why VibeGuard?
+## 💡 Why CodeScout?
 
 AI assistants are strongest when they read the **right** code, not **all** the code.
-VibeGuard builds a local, structured map of your project so your AI works with less
+CodeScout builds a local, structured map of your project so your AI works with less
 noise, fewer tokens, and higher accuracy — and you get a security and architecture
 toolkit for free.
 
 ```mermaid
 flowchart LR
-  A[Your repo] --> B[VibeGuard<br/>local analysis]
+  A[Your repo] --> B[CodeScout<br/>local analysis]
   B --> C[Dependency graph]
   B --> D[Security + audit]
   B --> E[Dead-code plan]
@@ -154,29 +154,29 @@ GraphMode: ON
 ### GraphMode — graph-first context (token savings)
 
 ```bash
-vibeguard graphmode on       # write graph-first rules to every IDE file
-vibeguard graphmode status   # check state + detect drift
-vibeguard graphmode off      # remove the rules everywhere
+codescout graphmode on       # write graph-first rules to every IDE file
+codescout graphmode status   # check state + detect drift
+codescout graphmode off      # remove the rules everywhere
 ```
 
-When you enable GraphMode (or run Quick Setup), VibeGuard asks **how to build the map**:
+When you enable GraphMode (or run Quick Setup), CodeScout asks **how to build the map**:
 
 1. **Copy prompt for creating map** *(recommended — most accurate)* — copies a precise prompt;
-   paste it into your coding agent (with repo access) and it writes `.vibeguard/graph.json`.
+   paste it into your coding agent (with repo access) and it writes `.codescout/graph.json`.
 2. **Generate map using LLM** — uses your configured API key to build the map automatically.
 3. **Create offline map** — local, no AI, instant (regex/AST based).
 
-All three produce the same `graph.json` schema → identical `graph.html`. View with `vibeguard graph`.
+All three produce the same `graph.json` schema → identical `graph.html`. View with `codescout graph`.
 
 ### Caveman Mode — terse AI replies
 
 Inspired by the [`caveman`](https://github.com/JuliusBrussee/caveman) skill. *(Rephrased for compliance.)*
 
 ```bash
-vibeguard caveman on          # enable (default: full)
-vibeguard caveman on ultra    # maximum compression
-vibeguard caveman status      # check state + detect drift
-vibeguard caveman off         # back to normal prose
+codescout caveman on          # enable (default: full)
+codescout caveman on ultra    # maximum compression
+codescout caveman status      # check state + detect drift
+codescout caveman off         # back to normal prose
 ```
 
 | Level | Effect | ~Output savings (prose) |
@@ -215,35 +215,35 @@ vibeguard caveman off         # back to normal prose
 
 | Command | Purpose |
 | --- | --- |
-| `vibeguard --run` | Interactive menu — every feature, one keypress away |
-| `vibeguard install --platform <name>` | One-shot editor/agent setup (or `vibeguard <platform> install`) |
-| `vibeguard uninstall --platform <name>` | Remove editor/agent integration |
-| `vibeguard init` | Initialize `.vibeguard/config.json` + build the graph |
-| `vibeguard map` | Build the dependency graph (incremental, SHA-256 change detection) |
-| `vibeguard graph --no-open` | Generate / open the interactive HTML graph |
-| `vibeguard graphmode on\|off\|status` | Control GraphMode (graph-first AI context) |
-| `vibeguard caveman on\|off\|status\|level` | Control Caveman Mode |
-| `vibeguard query "question"` | Ask graph-backed questions, no full-file reads |
-| `vibeguard path <a> <b>` | Shortest path between two nodes |
-| `vibeguard explain <node>` | Explain a file/node role & connections |
-| `vibeguard affected <node>` | Transitive dependents impacted by a change |
-| `vibeguard flows` | Execution flows, bridges & knowledge gaps |
-| `vibeguard search "query"` | Hybrid keyword + semantic search (local) |
-| `vibeguard pack "task"` | Build `.vibeguard/context-package.md` + `.json` |
-| `vibeguard benchmark` | Estimate token reduction vs full-repo reading |
-| `vibeguard review` | Risk-scored review of changed files |
-| `vibeguard security` | Scan secrets & framework security gaps |
-| `vibeguard attack [--ai] [--fix]` | Cyberattack scan (+ optional AI review/fix) |
-| `vibeguard audit [--sbom] [--min-severity]` | Unified security audit + 0-100 score |
-| `vibeguard ignore add\|remove\|list <id>` | Suppress specific findings by ID |
-| `vibeguard clean --plan \| --apply` | Detect dead code → recoverable trash |
-| `vibeguard trash list \| restore <id>` | Manage soft-deleted files |
-| `vibeguard add <file.pdf>` | Link PDF concepts into the graph |
-| `vibeguard watch` | Rebuild graph data on file changes |
-| `vibeguard hook install` | Pre-commit secret-blocking hook |
-| `vibeguard serve` (alias `mcp`) | Start the MCP server (live agent tools) |
-| `vibeguard doctor` | Aggregate findings into a 0-100 health score |
-| `vibeguard config set-key\|show\|test` | Manage LLM provider API keys (for AI scans) |
+| `codescout --run` | Interactive menu — every feature, one keypress away |
+| `codescout install --platform <name>` | One-shot editor/agent setup (or `codescout <platform> install`) |
+| `codescout uninstall --platform <name>` | Remove editor/agent integration |
+| `codescout init` | Initialize `.codescout/config.json` + build the graph |
+| `codescout map` | Build the dependency graph (incremental, SHA-256 change detection) |
+| `codescout graph --no-open` | Generate / open the interactive HTML graph |
+| `codescout graphmode on\|off\|status` | Control GraphMode (graph-first AI context) |
+| `codescout caveman on\|off\|status\|level` | Control Caveman Mode |
+| `codescout query "question"` | Ask graph-backed questions, no full-file reads |
+| `codescout path <a> <b>` | Shortest path between two nodes |
+| `codescout explain <node>` | Explain a file/node role & connections |
+| `codescout affected <node>` | Transitive dependents impacted by a change |
+| `codescout flows` | Execution flows, bridges & knowledge gaps |
+| `codescout search "query"` | Hybrid keyword + semantic search (local) |
+| `codescout pack "task"` | Build `.codescout/context-package.md` + `.json` |
+| `codescout benchmark` | Estimate token reduction vs full-repo reading |
+| `codescout review` | Risk-scored review of changed files |
+| `codescout security` | Scan secrets & framework security gaps |
+| `codescout attack [--ai] [--fix]` | Cyberattack scan (+ optional AI review/fix) |
+| `codescout audit [--sbom] [--min-severity]` | Unified security audit + 0-100 score |
+| `codescout ignore add\|remove\|list <id>` | Suppress specific findings by ID |
+| `codescout clean --plan \| --apply` | Detect dead code → recoverable trash |
+| `codescout trash list \| restore <id>` | Manage soft-deleted files |
+| `codescout add <file.pdf>` | Link PDF concepts into the graph |
+| `codescout watch` | Rebuild graph data on file changes |
+| `codescout hook install` | Pre-commit secret-blocking hook |
+| `codescout serve` (alias `mcp`) | Start the MCP server (live agent tools) |
+| `codescout doctor` | Aggregate findings into a 0-100 health score |
+| `codescout config set-key\|show\|test` | Manage LLM provider API keys (for AI scans) |
 
 Every machine-facing command supports `--json` and emits a `schemaVersion` field.
 
@@ -251,7 +251,7 @@ Every machine-facing command supports `--json` and emits a `schemaVersion` field
 
 ## 🔌 MCP Server — Live Agent Tools
 
-AI assistants can call VibeGuard's engines directly as **Model Context Protocol** tools over stdio.
+AI assistants can call CodeScout's engines directly as **Model Context Protocol** tools over stdio.
 Local, zero-network (except the optional AI scan), **13 tools**. The per-IDE installers write the
 MCP config for you. Manual wiring:
 
@@ -260,7 +260,7 @@ MCP config for you. Manual wiring:
 ```jsonc
 {
   "mcpServers": {
-    "vibeguard": { "command": "npx", "args": ["-y", "vibeguard-cli", "serve", "--cwd", "/abs/path/to/project"] }
+    "codescout": { "command": "npx", "args": ["-y", "codescout-cli", "serve", "--cwd", "/abs/path/to/project"] }
   }
 }
 ```
@@ -270,7 +270,7 @@ MCP config for you. Manual wiring:
 ```jsonc
 {
   "mcpServers": {
-    "vibeguard": { "command": "npx", "args": ["-y", "vibeguard-cli", "serve"], "disabled": false }
+    "codescout": { "command": "npx", "args": ["-y", "codescout-cli", "serve"], "disabled": false }
   }
 }
 ```
@@ -280,7 +280,7 @@ MCP config for you. Manual wiring:
 ```jsonc
 {
   "servers": {
-    "vibeguard": { "command": "npx", "args": ["-y", "vibeguard-cli", "serve"] }
+    "codescout": { "command": "npx", "args": ["-y", "codescout-cli", "serve"] }
   }
 }
 ```
@@ -307,12 +307,12 @@ MCP config for you. Manual wiring:
 
 ## 🗺️ Interactive Dependency Graph
 
-`vibeguard graph` builds a **self-contained interactive HTML map** of your codebase
-(`.vibeguard/graph.html`) and opens it in the browser.
+`codescout graph` builds a **self-contained interactive HTML map** of your codebase
+(`.codescout/graph.html`) and opens it in the browser.
 
 ```bash
-vibeguard map      # build/refresh graph data
-vibeguard graph    # render + open the interactive view
+codescout map      # build/refresh graph data
+codescout graph    # render + open the interactive view
 ```
 
 - **2D force-directed layout** — nodes auto-arrange by connectivity, then physics freezes
@@ -340,22 +340,22 @@ resolved across every extension and folder/index file.
 
 ## 🔐 Security & Attack Coverage
 
-VibeGuard ships **three local scanners** plus an optional AI deep-scan. All run offline with
+CodeScout ships **three local scanners** plus an optional AI deep-scan. All run offline with
 no API key (only `attack --ai` uses your configured LLM).
 
 ```bash
-vibeguard security                    # secret + framework scan
-vibeguard attack                      # cyberattack pattern scan (36 types)
-vibeguard audit                       # unified 5-engine audit + 0-100 score
-vibeguard attack --ai --fix           # AI deep-scan + auto-fix (with backups)
+codescout security                    # secret + framework scan
+codescout attack                      # cyberattack pattern scan (36 types)
+codescout audit                       # unified 5-engine audit + 0-100 score
+codescout attack --ai --fix           # AI deep-scan + auto-fix (with backups)
 ```
 
 False positive? Silence one finding by its ID — it's never flagged again:
 
 ```bash
-vibeguard ignore add SEC-016-1a2b3c4d   # stop flagging this finding
-vibeguard ignore list                   # see ignored findings
-vibeguard ignore remove SEC-016-1a2b3c4d
+codescout ignore add SEC-016-1a2b3c4d   # stop flagging this finding
+codescout ignore list                   # see ignored findings
+codescout ignore remove SEC-016-1a2b3c4d
 ```
 
 ### `security` — secrets & framework misuse
@@ -380,7 +380,7 @@ Mitigation-aware: a finding is suppressed when a matching defense is present in 
 
 ### `audit` — unified offline audit
 
-`vibeguard audit` runs **five local engines** in one pass → a single **0-100 security score**:
+`codescout audit` runs **five local engines** in one pass → a single **0-100 security score**:
 dependency CVEs (SCA), CycloneDX SBOM (`--sbom`), taint dataflow (sanitizer-aware), misconfiguration
 + service hardening (Dockerfile, `.env`, CI, `tsconfig`, SSH/nginx/MySQL), plus the secret + attack scanners.
 
@@ -390,7 +390,7 @@ any custom OpenAI-compatible endpoint.
 
 > **Honest limit:** these are static heuristics — they catch common, pattern-detectable
 > issues, not logic flaws, business-process abuse, or runtime-only vulnerabilities. Treat
-> VibeGuard as a strong first line, not a full replacement for a security audit.
+> CodeScout as a strong first line, not a full replacement for a security audit.
 
 ### Safety model
 
@@ -398,16 +398,16 @@ any custom OpenAI-compatible endpoint.
 | --- | --- |
 | Local core | Graph, security, health, dead-code, query, pack need no cloud AI |
 | Read-only default | Mutations require explicit `--fix`, `--apply`, or hook/integration install |
-| Recoverable | Removed files go to `.vibeguard-trash/` |
+| Recoverable | Removed files go to `.codescout-trash/` |
 | Project boundary | Safety checks reject paths outside the project root |
-| Secrets | LLM credentials live in `.vibeguard/credentials.json` with restrictive perms |
+| Secrets | LLM credentials live in `.codescout/credentials.json` with restrictive perms |
 
 ---
 
 ## 🧩 Programmatic API
 
 ```ts
-import { generateContextForEditor, serializeContextPackageForAgent } from 'vibeguard-cli';
+import { generateContextForEditor, serializeContextPackageForAgent } from 'codescout-cli';
 
 const pkg = await generateContextForEditor('fix auth login', { radius: 2, budget: 12000, mode: 'bugfix' });
 const markdown = serializeContextPackageForAgent(pkg);

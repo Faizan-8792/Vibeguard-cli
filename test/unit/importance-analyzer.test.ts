@@ -10,8 +10,8 @@ describe('Importance Analyzer', () => {
   let testDir: string;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `vibeguard-imp-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-    await mkdir(join(testDir, '.vibeguard'), { recursive: true });
+    testDir = join(tmpdir(), `codescout-imp-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    await mkdir(join(testDir, '.codescout'), { recursive: true });
   });
 
   afterEach(async () => {

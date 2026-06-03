@@ -1,6 +1,6 @@
 import { header, statusIcon, brand } from '../utils/ui.js';
 import { emitJson } from '../utils/json-output.js';
-import { VibeguardError, ErrorCodes } from '../utils/errors.js';
+import { CodeScoutError, ErrorCodes } from '../utils/errors.js';
 import { addIgnoredFindings, removeIgnoredFindings } from '../storage/config-store.js';
 import type { CommandContext } from '../context.js';
 
@@ -11,7 +11,7 @@ export interface IgnoreOptions {
 
 /**
  * Manage the per-finding ignore list. Ignored finding IDs (e.g. SEC-006-1a2b3c4d
- * or ATK-104-…) are stored in `.vibeguard/config.json` under `security.ignore`
+ * or ATK-104-…) are stored in `.codescout/config.json` under `security.ignore`
  * and suppressed by the security + attack scanners on every future run.
  */
 export async function runIgnore(ctx: CommandContext, opts: IgnoreOptions): Promise<void> {
@@ -28,7 +28,7 @@ export async function runIgnore(ctx: CommandContext, opts: IgnoreOptions): Promi
       listAction(config.security.ignore ?? [], options.json);
       break;
     default:
-      throw new VibeguardError(
+      throw new CodeScoutError(
         ErrorCodes.UNKNOWN_COMMAND,
         `Unknown ignore action: "${opts.action}". Valid: add <id...>, remove <id...>, list`,
       );
@@ -37,7 +37,7 @@ export async function runIgnore(ctx: CommandContext, opts: IgnoreOptions): Promi
 
 async function addAction(ctx: CommandContext, ids: string[]): Promise<void> {
   if (ids.length === 0) {
-    throw new VibeguardError(ErrorCodes.UNKNOWN_OPTION, 'Provide at least one finding ID to ignore, e.g. `vibeguard ignore add SEC-006-1a2b3c4d`');
+    throw new CodeScoutError(ErrorCodes.UNKNOWN_OPTION, 'Provide at least one finding ID to ignore, e.g. `codescout ignore add SEC-006-1a2b3c4d`');
   }
 
   const added = await addIgnoredFindings(ctx.projectRoot, ids);
@@ -59,14 +59,14 @@ async function addAction(ctx: CommandContext, ids: string[]): Promise<void> {
   }
   out.push('');
   out.push(`  ${brand.muted('These will no longer be flagged by security/attack scans.')}`);
-  out.push(`  ${brand.muted('Undo with:')} ${brand.info('vibeguard ignore remove <id>')}`);
+  out.push(`  ${brand.muted('Undo with:')} ${brand.info('codescout ignore remove <id>')}`);
   out.push('');
   process.stdout.write(out.join('\n') + '\n');
 }
 
 async function removeAction(ctx: CommandContext, ids: string[]): Promise<void> {
   if (ids.length === 0) {
-    throw new VibeguardError(ErrorCodes.UNKNOWN_OPTION, 'Provide at least one finding ID to un-ignore.');
+    throw new CodeScoutError(ErrorCodes.UNKNOWN_OPTION, 'Provide at least one finding ID to un-ignore.');
   }
 
   const removed = await removeIgnoredFindings(ctx.projectRoot, ids);

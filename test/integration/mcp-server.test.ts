@@ -10,7 +10,7 @@ let projectRoot: string;
 
 beforeAll(async () => {
   // Minimal real project so graph-backed tools have something to work with.
-  projectRoot = await mkdtemp(join(tmpdir(), 'vibeguard-mcp-'));
+  projectRoot = await mkdtemp(join(tmpdir(), 'codescout-mcp-'));
   await mkdir(join(projectRoot, 'src'), { recursive: true });
   await writeFile(
     join(projectRoot, 'package.json'),

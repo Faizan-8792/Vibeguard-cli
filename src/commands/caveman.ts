@@ -1,6 +1,6 @@
 import { header, statusIcon, brand, keyValue, divider } from '../utils/ui.js';
 import { emitJson } from '../utils/json-output.js';
-import { VibeguardError, ErrorCodes } from '../utils/errors.js';
+import { CodeScoutError, ErrorCodes } from '../utils/errors.js';
 import {
   loadCavemanState,
   isCavemanLevel,
@@ -51,7 +51,7 @@ export async function runCaveman(ctx: CommandContext, opts: CavemanOptions): Pro
       await showBenchmark(projectRoot, options.json);
       break;
     default:
-      throw new VibeguardError(
+      throw new CodeScoutError(
         ErrorCodes.UNKNOWN_OPTION,
         `Unknown caveman action: "${opts.action}". Use: on | off | status | level | benchmark`,
       );
@@ -61,7 +61,7 @@ export async function runCaveman(ctx: CommandContext, opts: CavemanOptions): Pro
 function resolveLevel(raw: string | undefined, current: CavemanLevel): CavemanLevel {
   if (raw === undefined) return current;
   if (!isCavemanLevel(raw)) {
-    throw new VibeguardError(
+    throw new CodeScoutError(
       ErrorCodes.UNKNOWN_OPTION,
       `Unknown caveman level: "${raw}". Valid levels: ${CAVEMAN_LEVELS.join(', ')}`,
       { level: raw, validLevels: [...CAVEMAN_LEVELS] },
@@ -75,9 +75,9 @@ async function enableAction(ctx: CommandContext, rawLevel: string | undefined, l
   const previous = await loadCavemanState(projectRoot);
 
   if (levelOnly && !previous.enabled) {
-    throw new VibeguardError(
+    throw new CodeScoutError(
       ErrorCodes.UNKNOWN_OPTION,
-      'Caveman mode is off. Enable it first with `vibeguard caveman on`.',
+      'Caveman mode is off. Enable it first with `codescout caveman on`.',
     );
   }
 
@@ -116,8 +116,8 @@ async function enableAction(ctx: CommandContext, rawLevel: string | undefined, l
   out.push('');
   out.push(`  ${brand.primary.bold('Why use many token when few do trick.')}`);
   out.push(`  ${brand.muted('Every chat now answers terse, high-signal. Technical accuracy kept 100%.')}`);
-  out.push(`  ${brand.muted('Switch level:')} ${brand.info('vibeguard caveman level ultra')}`);
-  out.push(`  ${brand.muted('Turn off:')}     ${brand.info('vibeguard caveman off')}`);
+  out.push(`  ${brand.muted('Switch level:')} ${brand.info('codescout caveman level ultra')}`);
+  out.push(`  ${brand.muted('Turn off:')}     ${brand.info('codescout caveman off')}`);
   out.push('');
   process.stdout.write(out.join('\n') + '\n');
 }
@@ -204,15 +204,15 @@ async function showStatus(projectRoot: string, jsonMode: boolean): Promise<void>
     out.push(`  ${statusIcon('warning')} ${brand.warning.bold('Drift detected: state is OFF but rule files still exist.')}`);
     out.push(`  ${brand.muted('These files still tell your AI to stay in Caveman mode:')}`);
     for (const a of artifacts) out.push(`    ${brand.muted('•')} ${brand.secondary(a)}`);
-    out.push(`  ${brand.muted('Fix (run in THIS project):')} ${brand.info('vibeguard caveman off')}`);
+    out.push(`  ${brand.muted('Fix (run in THIS project):')} ${brand.info('codescout caveman off')}`);
     out.push('');
   } else if (driftStaleOff) {
     out.push(`  ${statusIcon('warning')} ${brand.warning.bold('Drift detected: state is ON but no rule files found.')}`);
-    out.push(`  ${brand.muted('Re-apply rules with:')} ${brand.info('vibeguard caveman on')}`);
+    out.push(`  ${brand.muted('Re-apply rules with:')} ${brand.info('codescout caveman on')}`);
     out.push('');
   }
 
-  out.push(`  ${brand.muted(state.enabled ? 'Turn off: vibeguard caveman off' : 'Enable: vibeguard caveman on')}`);
+  out.push(`  ${brand.muted(state.enabled ? 'Turn off: codescout caveman off' : 'Enable: codescout caveman on')}`);
   out.push(`  ${brand.muted('Still seeing "Caveman mode: ON" in your IDE after off? Start a NEW chat —')}`);
   out.push(`  ${brand.muted('the AI caches instructions for the current session until then.')}`);
   out.push('');
@@ -253,7 +253,7 @@ async function showBenchmark(_projectRoot: string, jsonMode: boolean): Promise<v
     ));
   }
   out.push('');
-  out.push(`  ${brand.muted('Enable with:')} ${brand.info('vibeguard caveman on full')}`);
+  out.push(`  ${brand.muted('Enable with:')} ${brand.info('codescout caveman on full')}`);
   out.push('');
   process.stdout.write(out.join('\n') + '\n');
 }

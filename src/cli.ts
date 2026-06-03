@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createLogger } from './utils/logger.js';
-import { VibeguardError, ErrorCodes, getExitCode, formatErrorJson, formatErrorTerminal } from './utils/errors.js';
+import { CodeScoutError, ErrorCodes, getExitCode, formatErrorJson, formatErrorTerminal } from './utils/errors.js';
 import { loadConfig } from './storage/config-store.js';
 import { runInit } from './commands/init.js';
 import { banner, quickStart } from './utils/ui.js';
@@ -117,7 +117,7 @@ function setupProgram(): Command {
   const program = new Command();
 
   program
-    .name('vibeguard')
+    .name('codescout')
     .description('Local-only CLI for TypeScript/JavaScript static analysis, dead code detection, and context packaging')
     .version(getVersion())
     .option('--json', 'Output results as JSON', false)
@@ -161,7 +161,7 @@ function setupProgram(): Command {
   // init command
   program
     .command('init')
-    .description('Initialize .vibeguard/ configuration and build the dependency graph')
+    .description('Initialize .codescout/ configuration and build the dependency graph')
     .option('--force', 'Overwrite existing configuration', false)
     .option('--no-map', 'Skip building the dependency graph after init')
     .action(async (cmdOpts) => {
@@ -177,7 +177,7 @@ function setupProgram(): Command {
           const { runMap } = await import('./commands/map.js');
           await runMap(initCtx);
         } catch (err) {
-          initCtx.logger.warn(`Skipped graph build: ${err instanceof Error ? err.message : String(err)}. Run \`vibeguard map\` later.`);
+          initCtx.logger.warn(`Skipped graph build: ${err instanceof Error ? err.message : String(err)}. Run \`codescout map\` later.`);
         }
       }
     });
@@ -292,7 +292,7 @@ function setupProgram(): Command {
   // kiro command (platform-specific shortcut)
   program
     .command('kiro')
-    .description('Install/uninstall VibeGuard as a Kiro skill')
+    .description('Install/uninstall CodeScout as a Kiro skill')
     .argument('<action>', 'Action: install, uninstall')
     .action(async (action) => {
       const globalOpts = program.opts() as GlobalOptions;
@@ -303,9 +303,9 @@ function setupProgram(): Command {
       } else if (action === 'uninstall') {
         await runUninstall(ctx, { platform: 'kiro' });
       } else {
-        throw new VibeguardError(
+        throw new CodeScoutError(
           ErrorCodes.UNKNOWN_COMMAND,
-          `Unknown action: "${action}". Use: vibeguard kiro install | uninstall`,
+          `Unknown action: "${action}". Use: codescout kiro install | uninstall`,
         );
       }
     });
@@ -313,7 +313,7 @@ function setupProgram(): Command {
   // cursor command
   program
     .command('cursor')
-    .description('Install/uninstall VibeGuard for Cursor IDE')
+    .description('Install/uninstall CodeScout for Cursor IDE')
     .argument('<action>', 'Action: install, uninstall')
     .action(async (action) => {
       const globalOpts = program.opts() as GlobalOptions;
@@ -321,13 +321,13 @@ function setupProgram(): Command {
       const { runInstall, runUninstall } = await import('./commands/install.js');
       if (action === 'install') await runInstall(ctx, { platform: 'cursor' });
       else if (action === 'uninstall') await runUninstall(ctx, { platform: 'cursor' });
-      else throw new VibeguardError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: vibeguard cursor install | uninstall`);
+      else throw new CodeScoutError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: codescout cursor install | uninstall`);
     });
 
   // claude command
   program
     .command('claude')
-    .description('Install/uninstall VibeGuard for Claude Code')
+    .description('Install/uninstall CodeScout for Claude Code')
     .argument('<action>', 'Action: install, uninstall')
     .action(async (action) => {
       const globalOpts = program.opts() as GlobalOptions;
@@ -335,13 +335,13 @@ function setupProgram(): Command {
       const { runInstall, runUninstall } = await import('./commands/install.js');
       if (action === 'install') await runInstall(ctx, { platform: 'claude' });
       else if (action === 'uninstall') await runUninstall(ctx, { platform: 'claude' });
-      else throw new VibeguardError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: vibeguard claude install | uninstall`);
+      else throw new CodeScoutError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: codescout claude install | uninstall`);
     });
 
   // copilot command
   program
     .command('copilot')
-    .description('Install/uninstall VibeGuard for GitHub Copilot')
+    .description('Install/uninstall CodeScout for GitHub Copilot')
     .argument('<action>', 'Action: install, uninstall')
     .action(async (action) => {
       const globalOpts = program.opts() as GlobalOptions;
@@ -349,13 +349,13 @@ function setupProgram(): Command {
       const { runInstall, runUninstall } = await import('./commands/install.js');
       if (action === 'install') await runInstall(ctx, { platform: 'copilot' });
       else if (action === 'uninstall') await runUninstall(ctx, { platform: 'copilot' });
-      else throw new VibeguardError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: vibeguard copilot install | uninstall`);
+      else throw new CodeScoutError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: codescout copilot install | uninstall`);
     });
 
   // gemini command
   program
     .command('gemini')
-    .description('Install/uninstall VibeGuard for Google Gemini')
+    .description('Install/uninstall CodeScout for Google Gemini')
     .argument('<action>', 'Action: install, uninstall')
     .action(async (action) => {
       const globalOpts = program.opts() as GlobalOptions;
@@ -363,13 +363,13 @@ function setupProgram(): Command {
       const { runInstall, runUninstall } = await import('./commands/install.js');
       if (action === 'install') await runInstall(ctx, { platform: 'gemini' });
       else if (action === 'uninstall') await runUninstall(ctx, { platform: 'gemini' });
-      else throw new VibeguardError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: vibeguard gemini install | uninstall`);
+      else throw new CodeScoutError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: codescout gemini install | uninstall`);
     });
 
   // aider command
   program
     .command('aider')
-    .description('Install/uninstall VibeGuard for Aider')
+    .description('Install/uninstall CodeScout for Aider')
     .argument('<action>', 'Action: install, uninstall')
     .action(async (action) => {
       const globalOpts = program.opts() as GlobalOptions;
@@ -377,13 +377,13 @@ function setupProgram(): Command {
       const { runInstall, runUninstall } = await import('./commands/install.js');
       if (action === 'install') await runInstall(ctx, { platform: 'aider' });
       else if (action === 'uninstall') await runUninstall(ctx, { platform: 'aider' });
-      else throw new VibeguardError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: vibeguard aider install | uninstall`);
+      else throw new CodeScoutError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: codescout aider install | uninstall`);
     });
 
   // vscode command
   program
     .command('vscode')
-    .description('Install/uninstall VibeGuard for VS Code (Copilot Chat + MCP)')
+    .description('Install/uninstall CodeScout for VS Code (Copilot Chat + MCP)')
     .argument('<action>', 'Action: install, uninstall')
     .action(async (action) => {
       const globalOpts = program.opts() as GlobalOptions;
@@ -391,13 +391,13 @@ function setupProgram(): Command {
       const { runInstall, runUninstall } = await import('./commands/install.js');
       if (action === 'install') await runInstall(ctx, { platform: 'vscode' });
       else if (action === 'uninstall') await runUninstall(ctx, { platform: 'vscode' });
-      else throw new VibeguardError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: vibeguard vscode install | uninstall`);
+      else throw new CodeScoutError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: codescout vscode install | uninstall`);
     });
 
   // codex command (also covers any AGENTS.md-aware agent)
   program
     .command('codex')
-    .description('Install/uninstall VibeGuard for Codex / AGENTS.md agents')
+    .description('Install/uninstall CodeScout for Codex / AGENTS.md agents')
     .argument('<action>', 'Action: install, uninstall')
     .action(async (action) => {
       const globalOpts = program.opts() as GlobalOptions;
@@ -405,13 +405,13 @@ function setupProgram(): Command {
       const { runInstall, runUninstall } = await import('./commands/install.js');
       if (action === 'install') await runInstall(ctx, { platform: 'codex' });
       else if (action === 'uninstall') await runUninstall(ctx, { platform: 'codex' });
-      else throw new VibeguardError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: vibeguard codex install | uninstall`);
+      else throw new CodeScoutError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: codescout codex install | uninstall`);
     });
 
   // antigravity command (Google Antigravity IDE)
   program
     .command('antigravity')
-    .description('Install/uninstall VibeGuard for Google Antigravity IDE')
+    .description('Install/uninstall CodeScout for Google Antigravity IDE')
     .argument('<action>', 'Action: install, uninstall')
     .action(async (action) => {
       const globalOpts = program.opts() as GlobalOptions;
@@ -419,13 +419,13 @@ function setupProgram(): Command {
       const { runInstall, runUninstall } = await import('./commands/install.js');
       if (action === 'install') await runInstall(ctx, { platform: 'antigravity' });
       else if (action === 'uninstall') await runUninstall(ctx, { platform: 'antigravity' });
-      else throw new VibeguardError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: vibeguard antigravity install | uninstall`);
+      else throw new CodeScoutError(ErrorCodes.UNKNOWN_COMMAND, `Unknown action. Use: codescout antigravity install | uninstall`);
     });
 
   // install command
   program
     .command('install')
-    .description('Install VibeGuard into your AI assistant — one shot: integration + config + Caveman + graph')
+    .description('Install CodeScout into your AI assistant — one shot: integration + config + Caveman + graph')
     .option('--platform <name>', 'Platform: kiro (default)', 'kiro')
     .option('--caveman [level]', 'Enable Caveman Mode (on by default; optional level: lite|full|ultra)')
     .option('--no-caveman', 'Skip enabling Caveman Mode')
@@ -440,7 +440,7 @@ function setupProgram(): Command {
   // uninstall command
   program
     .command('uninstall')
-    .description('Remove VibeGuard skill from your AI coding assistant')
+    .description('Remove CodeScout skill from your AI coding assistant')
     .option('--platform <name>', 'Platform: kiro (default)', 'kiro')
     .action(async (cmdOpts) => {
       const globalOpts = program.opts() as GlobalOptions;
@@ -591,7 +591,7 @@ function setupProgram(): Command {
   // benchmark command — token usage comparison vs full-read baseline
   program
     .command('benchmark')
-    .description('Benchmark token usage: VibeGuard graph-based vs reading every file')
+    .description('Benchmark token usage: CodeScout graph-based vs reading every file')
     .option('--chars-per-token <n>', 'Chars-per-token divisor for the estimate (default 4)', parseInt)
     .action(async (cmdOpts) => {
       const globalOpts = program.opts() as GlobalOptions;
@@ -656,7 +656,7 @@ function setupProgram(): Command {
   program
     .command('serve')
     .alias('mcp')
-    .description('Start the VibeGuard MCP server (exposes analysis engines as live agent tools)')
+    .description('Start the CodeScout MCP server (exposes analysis engines as live agent tools)')
     .option('--tools <names>', 'Comma-separated allowlist of MCP tools to expose')
     .action(async (cmdOpts) => {
       const globalOpts = program.opts() as GlobalOptions;
@@ -694,7 +694,7 @@ function setupProgram(): Command {
     .command('audit')
     .description('Unified security audit: dependency CVEs, taint dataflow, misconfiguration, secrets & attacks')
     .option('--min-severity <level>', 'Only show findings at/above this severity (critical|high|medium|low)')
-    .option('--sbom', 'Also write a CycloneDX SBOM to .vibeguard/sbom.json', false)
+    .option('--sbom', 'Also write a CycloneDX SBOM to .codescout/sbom.json', false)
     .action(async (cmdOpts) => {
       const globalOpts = program.opts() as GlobalOptions;
       const ctx = await createContext(globalOpts, 'audit');
@@ -714,7 +714,7 @@ async function main(): Promise<void> {
     const globalOpts = program.opts() as GlobalOptions;
     const isJson = globalOpts?.json ?? false;
 
-    if (err instanceof VibeguardError) {
+    if (err instanceof CodeScoutError) {
       if (isJson) {
         process.stdout.write(JSON.stringify(formatErrorJson(err), null, 2) + '\n');
       } else {
@@ -722,7 +722,7 @@ async function main(): Promise<void> {
       }
       process.exit(getExitCode(err.code));
     } else {
-      const internalError = new VibeguardError(
+      const internalError = new CodeScoutError(
         ErrorCodes.INTERNAL_ERROR,
         err instanceof Error ? err.message : 'Unknown error',
       );

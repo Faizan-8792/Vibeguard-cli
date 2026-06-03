@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 async function setup(files: Record<string, string>): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), 'vg-atk-'));
   await mkdir(join(dir, 'src'), { recursive: true });
-  await mkdir(join(dir, '.vibeguard'), { recursive: true });
+  await mkdir(join(dir, '.codescout'), { recursive: true });
   for (const [name, content] of Object.entries(files)) {
     await writeFile(join(dir, name), content, 'utf-8');
   }

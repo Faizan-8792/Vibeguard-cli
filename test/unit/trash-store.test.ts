@@ -8,7 +8,7 @@ describe('Trash Store', () => {
   let testDir: string;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `vibeguard-trash-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    testDir = join(tmpdir(), `codescout-trash-${Date.now()}-${Math.random().toString(36).slice(2)}`);
     await mkdir(join(testDir, 'src'), { recursive: true });
   });
 

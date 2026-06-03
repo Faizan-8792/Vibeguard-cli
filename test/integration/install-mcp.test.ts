@@ -21,7 +21,7 @@ async function makeCtx(root: string): Promise<CommandContext> {
 }
 
 beforeEach(async () => {
-  projectRoot = await mkdtemp(join(tmpdir(), 'vibeguard-install-'));
+  projectRoot = await mkdtemp(join(tmpdir(), 'codescout-install-'));
   await writeFile(join(projectRoot, 'package.json'), JSON.stringify({ name: 'fixture', version: '1.0.0' }), 'utf-8');
 });
 
@@ -30,16 +30,16 @@ afterEach(async () => {
 });
 
 describe('Integration: install writes a real MCP config', () => {
-  it('kiro install creates .kiro/settings/mcp.json with the vibeguard server', async () => {
+  it('kiro install creates .kiro/settings/mcp.json with the codescout server', async () => {
     const ctx = await makeCtx(projectRoot);
     await runInstall(ctx, { platform: 'kiro' });
 
     const raw = await readFile(join(projectRoot, '.kiro', 'settings', 'mcp.json'), 'utf-8');
     const config = JSON.parse(raw);
     expect(config.mcpServers).toBeDefined();
-    expect(config.mcpServers.vibeguard).toBeDefined();
-    expect(config.mcpServers.vibeguard.args).toContain('serve');
-    expect(config.mcpServers.vibeguard.disabled).toBe(false);
+    expect(config.mcpServers.codescout).toBeDefined();
+    expect(config.mcpServers.codescout.args).toContain('serve');
+    expect(config.mcpServers.codescout.disabled).toBe(false);
   });
 
   it('merges into an existing mcp.json without clobbering other servers', async () => {
@@ -56,6 +56,6 @@ describe('Integration: install writes a real MCP config', () => {
 
     const config = JSON.parse(await readFile(join(settingsDir, 'mcp.json'), 'utf-8'));
     expect(config.mcpServers.existing).toBeDefined();
-    expect(config.mcpServers.vibeguard).toBeDefined();
+    expect(config.mcpServers.codescout).toBeDefined();
   });
 });

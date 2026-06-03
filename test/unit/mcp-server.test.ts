@@ -3,7 +3,7 @@ import { createTools, filterTools, parseToolAllowlist } from '../../src/mcp/tool
 import { buildMcpServer } from '../../src/mcp/server.js';
 
 describe('MCP tool registry', () => {
-  it('exposes the core VibeGuard tools', () => {
+  it('exposes the core CodeScout tools', () => {
     const names = createTools().map((t) => t.name);
     expect(names).toContain('get_minimal_context');
     expect(names).toContain('scan_security');
@@ -43,7 +43,7 @@ describe('MCP tool registry', () => {
       const on = await tool!.run({ action: 'on', level: 'ultra' }, { projectRoot: dir }) as { enabled: boolean; level: string };
       expect(on.enabled).toBe(true);
       expect(on.level).toBe('ultra');
-      await access(join(dir, '.kiro', 'steering', 'vibeguard-caveman.md')); // throws if missing
+      await access(join(dir, '.kiro', 'steering', 'codescout-caveman.md')); // throws if missing
 
       const off = await tool!.run({ action: 'off' }, { projectRoot: dir }) as { enabled: boolean };
       expect(off.enabled).toBe(false);

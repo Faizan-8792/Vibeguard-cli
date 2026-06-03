@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os';
 async function setupProject(): Promise<{ dir: string; cleanup: () => Promise<void> }> {
   const dir = await mkdtemp(join(tmpdir(), 'vg-ctx-'));
   await mkdir(join(dir, 'src'), { recursive: true });
-  await mkdir(join(dir, '.vibeguard'), { recursive: true });
+  await mkdir(join(dir, '.codescout'), { recursive: true });
   // Create dummy files for cost estimation
   await writeFile(join(dir, 'src/auth.ts'), 'export const login = () => {};', 'utf-8');
   await writeFile(join(dir, 'src/db.ts'), 'export const query = () => {};', 'utf-8');

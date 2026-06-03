@@ -13,7 +13,7 @@ async function createTempProject(files: Record<string, string>): Promise<string>
   const dir = await mkdtemp(join(tmpdir(), 'vg-graph-'));
   const srcDir = join(dir, 'src');
   await mkdir(srcDir, { recursive: true });
-  await mkdir(join(dir, '.vibeguard'), { recursive: true });
+  await mkdir(join(dir, '.codescout'), { recursive: true });
 
   for (const [name, content] of Object.entries(files)) {
     const filePath = join(dir, name);

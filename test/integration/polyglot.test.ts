@@ -15,8 +15,8 @@ describe('Integration: Polyglot graph building', () => {
   let config: ResolvedConfig;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `vibeguard-polyglot-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-    await mkdir(join(testDir, '.vibeguard'), { recursive: true });
+    testDir = join(tmpdir(), `codescout-polyglot-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    await mkdir(join(testDir, '.codescout'), { recursive: true });
     config = await loadConfig(testDir);
   });
 

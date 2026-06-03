@@ -3,9 +3,9 @@
  *
  * Maps changed files to their blast radius (transitive dependents through the
  * graph), scores each change by risk, flags test-coverage gaps, and — uniquely
- * to VibeGuard — folds in security/attack findings on the changed files. This
+ * to CodeScout — folds in security/attack findings on the changed files. This
  * is the "code review" pillar that pairs the graph intelligence of
- * code-review-graph with VibeGuard's security moat.
+ * code-review-graph with CodeScout's security moat.
  *
  * Pure analysis over an already-built graph: zero file reads beyond the diff,
  * zero tokens.

@@ -51,8 +51,8 @@ export class LLMClient {
 
     // OpenRouter recommends these headers for attribution
     if (this.credentials.provider === 'openrouter') {
-      headers['HTTP-Referer'] = 'https://github.com/vibeguard/vibeguard';
-      headers['X-Title'] = 'VibeGuard';
+      headers['HTTP-Referer'] = 'https://github.com/codescout/codescout';
+      headers['X-Title'] = 'CodeScout';
     }
 
     const body = {

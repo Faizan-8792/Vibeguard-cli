@@ -6,7 +6,7 @@ export interface ServeCommandOptions {
 }
 
 /**
- * Start the VibeGuard MCP server on stdio.
+ * Start the CodeScout MCP server on stdio.
  *
  * This is a long-running process: it speaks the Model Context Protocol over
  * stdin/stdout and must NOT write anything else to stdout (that would corrupt
@@ -18,7 +18,7 @@ export async function runServe(ctx: CommandContext, opts: ServeCommandOptions): 
 
   // Diagnostic line on stderr (safe — stdout is reserved for the MCP stream).
   process.stderr.write(
-    `[vibeguard] MCP server starting (project: ${ctx.projectRoot}${allow ? `, tools: ${allow.join(',')}` : ''})\n`,
+    `[codescout] MCP server starting (project: ${ctx.projectRoot}${allow ? `, tools: ${allow.join(',')}` : ''})\n`,
   );
 
   await startMcpServer({

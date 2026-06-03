@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import * as fc from 'fast-check';
 import { wrapJsonOutput, SCHEMA_VERSION } from '../../src/utils/json-output.js';
-import { VibeguardError, ErrorCodes, formatErrorJson } from '../../src/utils/errors.js';
+import { CodeScoutError, ErrorCodes, formatErrorJson } from '../../src/utils/errors.js';
 import { createLogger } from '../../src/utils/logger.js';
 
 afterEach(() => {
@@ -62,7 +62,7 @@ describe('Property 2: Unknown Token Error Reporting', () => {
       fc.property(
         fc.stringMatching(/^[a-z]{3,10}$/),
         (token) => {
-          const error = new VibeguardError(
+          const error = new CodeScoutError(
             ErrorCodes.UNKNOWN_COMMAND,
             `Unknown command: "${token}"`,
           );
@@ -79,7 +79,7 @@ describe('Property 2: Unknown Token Error Reporting', () => {
       fc.property(
         fc.stringMatching(/^--[a-z]{3,10}$/),
         (token) => {
-          const error = new VibeguardError(
+          const error = new CodeScoutError(
             ErrorCodes.UNKNOWN_OPTION,
             `Unknown option: "${token}"`,
           );
@@ -99,7 +99,7 @@ describe('Property 3: Structured Error Shape in JSON Mode', () => {
         fc.constantFrom(...Object.values(ErrorCodes)),
         fc.string({ minLength: 1, maxLength: 100 }),
         (code, message) => {
-          const error = new VibeguardError(code, message);
+          const error = new CodeScoutError(code, message);
           const json = formatErrorJson(error);
 
           expect(json.schemaVersion).toBe(SCHEMA_VERSION);
@@ -147,11 +147,11 @@ describe('Property 40: Schema Version Staleness Triggers Rebuild', () => {
 
     const dir = await mkdtemp(join(tmpdir(), 'vg-schema-'));
     await mkdir(join(dir, 'src'), { recursive: true });
-    await mkdir(join(dir, '.vibeguard'), { recursive: true });
+    await mkdir(join(dir, '.codescout'), { recursive: true });
     await writeFile(join(dir, 'src/a.ts'), 'export const x = 1;', 'utf-8');
 
     // Write stale meta with wrong schema version
-    await writeFile(join(dir, '.vibeguard/analysis-meta.json'), JSON.stringify({
+    await writeFile(join(dir, '.codescout/analysis-meta.json'), JSON.stringify({
       schemaVersion: '0.0.1',
       buildTimestamp: new Date().toISOString(),
       fileHashes: {},

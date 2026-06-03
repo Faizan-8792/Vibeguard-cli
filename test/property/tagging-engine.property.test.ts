@@ -23,7 +23,7 @@ describe('Property 25: Tag Format Invariant', () => {
         async (fileSpecs) => {
           const dir = await mkdtemp(join(tmpdir(), 'vg-tag-'));
           await mkdir(join(dir, 'src'), { recursive: true });
-          await mkdir(join(dir, '.vibeguard'), { recursive: true });
+          await mkdir(join(dir, '.codescout'), { recursive: true });
 
           const graphNodes = new Map<string, GraphNode>();
 
@@ -65,7 +65,7 @@ describe('Property 26: Tag Derivation from Identifiers', () => {
   it('exported identifiers produce tags from their camelCase parts', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'vg-tag-'));
     await mkdir(join(dir, 'src'), { recursive: true });
-    await mkdir(join(dir, '.vibeguard'), { recursive: true });
+    await mkdir(join(dir, '.codescout'), { recursive: true });
 
     await writeFile(join(dir, 'src/myComponent.ts'), 'export function handleUserLogin() { return true; }', 'utf-8');
 
@@ -92,7 +92,7 @@ describe('Property 27: Framework Pattern Tag Assignment', () => {
   it('files in pages/api/ get api and route tags', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'vg-tag-'));
     await mkdir(join(dir, 'pages', 'api'), { recursive: true });
-    await mkdir(join(dir, '.vibeguard'), { recursive: true });
+    await mkdir(join(dir, '.codescout'), { recursive: true });
 
     await writeFile(join(dir, 'pages/api/users.ts'), 'export default function handler() {}', 'utf-8');
 
@@ -117,7 +117,7 @@ describe('Property 27: Framework Pattern Tag Assignment', () => {
   it('files in components/ get component tag', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'vg-tag-'));
     await mkdir(join(dir, 'src', 'components'), { recursive: true });
-    await mkdir(join(dir, '.vibeguard'), { recursive: true });
+    await mkdir(join(dir, '.codescout'), { recursive: true });
 
     await writeFile(join(dir, 'src/components/Button.tsx'), 'export function Button() { return null; }', 'utf-8');
 

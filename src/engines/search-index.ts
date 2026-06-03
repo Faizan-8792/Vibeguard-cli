@@ -1,11 +1,11 @@
 /**
  * Search index — a pure-TypeScript full-text index over graph nodes.
  *
- * Why not SQLite FTS5? VibeGuard's requirements mandate "no native compilation"
+ * Why not SQLite FTS5? CodeScout's requirements mandate "no native compilation"
  * and Node >= 18. `better-sqlite3` is a native addon and `node:sqlite` is
  * experimental and Node 22+ only, so neither upholds those guarantees. Instead
  * we build a tokenized inverted index in memory and persist it to
- * `.vibeguard/search-index.json` — same local-first, zero-native, JSON-storage
+ * `.codescout/search-index.json` — same local-first, zero-native, JSON-storage
  * model as the rest of the project, with sub-millisecond lookups in practice.
  *
  * The index stores, per node: the file path, exported symbol names, and the
@@ -131,7 +131,7 @@ export function searchIndex(index: SearchIndexData, query: string, limit = 20): 
   return hits.sort((a, b) => b.score - a.score).slice(0, limit);
 }
 
-/** Persist the index to `.vibeguard/search-index.json`. */
+/** Persist the index to `.codescout/search-index.json`. */
 export async function saveSearchIndex(projectRoot: string, index: SearchIndexData): Promise<void> {
   const store = new FileStoreImpl(projectRoot);
   await store.write(INDEX_FILE, index);

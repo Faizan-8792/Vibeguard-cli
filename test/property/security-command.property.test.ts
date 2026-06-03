@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 describe('Property 14: Read-Only by Default', () => {
   it('security scan does not modify any files', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'vg-sec-'));
-    await mkdir(join(dir, '.vibeguard'), { recursive: true });
+    await mkdir(join(dir, '.codescout'), { recursive: true });
     await writeFile(join(dir, 'secret.ts'), 'const key = "sk-abcdefghijklmnopqrstuvwxyz";', 'utf-8');
 
     const originalContent = await readFile(join(dir, 'secret.ts'), 'utf-8');
@@ -28,12 +28,12 @@ describe('Property 14: Read-Only by Default', () => {
 describe('Property 16: Gitignore Fix Idempotence', () => {
   it('running gitignore fix twice produces same result', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'vg-sec-'));
-    await mkdir(join(dir, '.vibeguard'), { recursive: true });
+    await mkdir(join(dir, '.codescout'), { recursive: true });
     await writeFile(join(dir, '.env'), 'SECRET=value', 'utf-8');
     await writeFile(join(dir, '.gitignore'), 'node_modules\n', 'utf-8');
 
     // Simulate gitignore fix logic
-    const requiredEntries = ['.env', '.env.local', '.vibeguard/', '.vibeguard-trash/'];
+    const requiredEntries = ['.env', '.env.local', '.codescout/', '.codescout-trash/'];
 
     async function applyGitignoreFix() {
       const gitignorePath = join(dir, '.gitignore');

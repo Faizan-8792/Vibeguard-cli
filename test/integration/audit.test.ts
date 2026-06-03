@@ -36,7 +36,7 @@ async function exists(p: string): Promise<boolean> {
 
 beforeEach(async () => {
   projectRoot = await mkdtemp(join(tmpdir(), 'vg-audit-'));
-  await mkdir(join(projectRoot, '.vibeguard'), { recursive: true });
+  await mkdir(join(projectRoot, '.codescout'), { recursive: true });
   await mkdir(join(projectRoot, 'src'), { recursive: true });
   // A vulnerable dependency + a taint flow + a misconfig, so the audit has signal.
   await writeFile(join(projectRoot, 'package.json'), JSON.stringify({
@@ -78,10 +78,10 @@ describe('Integration: audit command', () => {
     const ctx = await makeCtx(projectRoot, true);
     const out = await capture(() => runAudit(ctx, { sbom: true }));
     const json = JSON.parse(out);
-    expect(json.sbom).toBe('.vibeguard/sbom.json');
-    expect(await exists(join(projectRoot, '.vibeguard', 'sbom.json'))).toBe(true);
+    expect(json.sbom).toBe('.codescout/sbom.json');
+    expect(await exists(join(projectRoot, '.codescout', 'sbom.json'))).toBe(true);
 
-    const sbom = JSON.parse(await readFile(join(projectRoot, '.vibeguard', 'sbom.json'), 'utf-8'));
+    const sbom = JSON.parse(await readFile(join(projectRoot, '.codescout', 'sbom.json'), 'utf-8'));
     expect(sbom.bomFormat).toBe('CycloneDX');
     expect(sbom.components.some((c: { name: string }) => c.name === 'lodash')).toBe(true);
   });

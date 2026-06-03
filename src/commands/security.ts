@@ -4,7 +4,7 @@ import { scanSecurity } from '../engines/security-scanner.js';
 import { resolveFiles } from '../utils/glob-resolver.js';
 import { SafetyContext } from '../utils/safety.js';
 import { createGitUtils } from '../utils/git-utils.js';
-import { VibeguardError, ErrorCodes } from '../utils/errors.js';
+import { CodeScoutError, ErrorCodes } from '../utils/errors.js';
 import { emitJson } from '../utils/json-output.js';
 import { header, severityBadge, filePath, divider, summaryLine, statusIcon, brand } from '../utils/ui.js';
 import type { CommandContext } from '../context.js';
@@ -50,7 +50,7 @@ export async function runSecurity(ctx: CommandContext, opts: SecurityCommandOpti
       const affectedFiles = new Set(secretIssues.map((i) => i.file));
 
       if (affectedFiles.size > 25 && !opts.force) {
-        throw new VibeguardError(
+        throw new CodeScoutError(
           ErrorCodes.LIMIT_EXCEEDED,
           `--fix=env would modify ${affectedFiles.size} files (limit: 25). Use --force to override.`,
           { count: affectedFiles.size, limit: 25 }
@@ -116,7 +116,7 @@ export async function runSecurity(ctx: CommandContext, opts: SecurityCommandOpti
 
     output.push(`  ${brand.muted('Run with --fix=gitignore or --fix=env to auto-fix')}`);
     if (result.issues.length > 0) {
-      output.push(`  ${brand.muted('False positive? Ignore one with')} ${brand.info('vibeguard ignore add <ID>')} ${brand.muted('(IDs shown above)')}`);
+      output.push(`  ${brand.muted('False positive? Ignore one with')} ${brand.info('codescout ignore add <ID>')} ${brand.muted('(IDs shown above)')}`);
     }
     output.push('');
     process.stdout.write(output.join('\n') + '\n');
@@ -129,7 +129,7 @@ async function fixGitignore(
   logger: { info(msg: string): void },
 ): Promise<void> {
   const gitignorePath = join(projectRoot, '.gitignore');
-  const requiredEntries = ['.env', '.env.local', '.vibeguard/', '.vibeguard-trash/'];
+  const requiredEntries = ['.env', '.env.local', '.codescout/', '.codescout-trash/'];
 
   let content = '';
   try {

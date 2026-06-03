@@ -24,7 +24,7 @@ export class TrashStoreImpl implements TrashStore {
 
   constructor(projectRoot: string) {
     this.projectRoot = projectRoot;
-    this.trashDir = join(projectRoot, '.vibeguard-trash');
+    this.trashDir = join(projectRoot, '.codescout-trash');
   }
 
   async move(filePath: string, meta: Omit<TrashEntry, 'id' | 'movedAt'>): Promise<string> {

@@ -1,6 +1,6 @@
 import { header, statusIcon, brand, keyValue, divider } from '../utils/ui.js';
 import { emitJson } from '../utils/json-output.js';
-import { VibeguardError, ErrorCodes } from '../utils/errors.js';
+import { CodeScoutError, ErrorCodes } from '../utils/errors.js';
 import {
   loadGraphModeState,
   enableGraphMode,
@@ -32,7 +32,7 @@ export async function runGraphMode(ctx: CommandContext, opts: GraphModeOptions):
       await showStatus(ctx);
       break;
     default:
-      throw new VibeguardError(
+      throw new CodeScoutError(
         ErrorCodes.UNKNOWN_OPTION,
         `Unknown graphmode action: "${opts.action}". Use: on | off | status`,
       );
@@ -60,8 +60,8 @@ async function enableAction(ctx: CommandContext): Promise<void> {
   out.push(divider());
   out.push('');
   out.push(`  ${brand.muted('AI now reads only the relevant files via the graph. Big token savings.')}`);
-  out.push(`  ${brand.muted('Build/refresh graph data:')} ${brand.info('vibeguard map')}`);
-  out.push(`  ${brand.muted('Turn off:')} ${brand.info('vibeguard graphmode off')}`);
+  out.push(`  ${brand.muted('Build/refresh graph data:')} ${brand.info('codescout map')}`);
+  out.push(`  ${brand.muted('Turn off:')} ${brand.info('codescout graphmode off')}`);
   out.push('');
   out.push(`  ${brand.danger.bold('⚠ Start a NEW chat (or reload the IDE window) to apply this.')}`);
   out.push(`  ${brand.danger('  Open AI sessions cache old instructions until then.')}`);
@@ -140,15 +140,15 @@ async function showStatus(ctx: CommandContext): Promise<void> {
     out.push(`  ${statusIcon('warning')} ${brand.warning.bold('Drift detected: state is OFF but rule files still exist.')}`);
     out.push(`  ${brand.muted('These files still tell your AI to stay in GraphMode:')}`);
     for (const a of artifacts) out.push(`    ${brand.muted('•')} ${brand.secondary(a)}`);
-    out.push(`  ${brand.muted('Fix (run in THIS project):')} ${brand.info('vibeguard graphmode off')}`);
+    out.push(`  ${brand.muted('Fix (run in THIS project):')} ${brand.info('codescout graphmode off')}`);
     out.push('');
   } else if (driftStaleOff) {
     out.push(`  ${statusIcon('warning')} ${brand.warning.bold('Drift detected: state is ON but no rule files found.')}`);
-    out.push(`  ${brand.muted('Re-apply rules with:')} ${brand.info('vibeguard graphmode on')}`);
+    out.push(`  ${brand.muted('Re-apply rules with:')} ${brand.info('codescout graphmode on')}`);
     out.push('');
   }
 
-  out.push(`  ${brand.muted(state.enabled ? 'Turn off: vibeguard graphmode off' : 'Enable: vibeguard graphmode on')}`);
+  out.push(`  ${brand.muted(state.enabled ? 'Turn off: codescout graphmode off' : 'Enable: codescout graphmode on')}`);
   out.push(`  ${brand.muted('Still seeing "GraphMode: ON" in your IDE after off? Start a NEW chat —')}`);
   out.push(`  ${brand.muted('the AI caches instructions for the current session until then.')}`);
   out.push('');

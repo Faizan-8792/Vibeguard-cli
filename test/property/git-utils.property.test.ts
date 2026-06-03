@@ -44,9 +44,9 @@ describe('Property 38: Git Command Safety', () => {
       fc.property(
         fc.string({ minLength: 1, maxLength: 50 }),
         (commandName) => {
-          // The safety module generates branch names like: vibeguard/<command>-<timestamp>
+          // The safety module generates branch names like: codescout/<command>-<timestamp>
           const timestamp = '2025-01-01T00-00-00';
-          const branchName = `vibeguard/${commandName}-${timestamp}`;
+          const branchName = `codescout/${commandName}-${timestamp}`;
           // Branch name should not contain shell-dangerous characters that could cause injection
           // The actual createBranch uses execFile which is safe against injection
           expect(typeof branchName).toBe('string');

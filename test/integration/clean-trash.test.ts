@@ -52,7 +52,7 @@ describe('Integration: clean --apply moves dead files to trash', () => {
     expect(deadFiles).toContain('src/orphan.ts');
   });
 
-  it('apply moves the dead file into .vibeguard-trash and removes the original', async () => {
+  it('apply moves the dead file into .codescout-trash and removes the original', async () => {
     const result = await runCli(['clean', '--apply', '--json'], projectDir);
     expect(result.exitCode).toBe(0);
     const parsed = JSON.parse(result.stdout);

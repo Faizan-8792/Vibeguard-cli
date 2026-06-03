@@ -8,7 +8,7 @@ describe('Config Store', () => {
   let testDir: string;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `vibeguard-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    testDir = join(tmpdir(), `codescout-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
     await mkdir(testDir, { recursive: true });
   });
 
@@ -25,9 +25,9 @@ describe('Config Store', () => {
   });
 
   it('loads and merges config from file', async () => {
-    await mkdir(join(testDir, '.vibeguard'), { recursive: true });
+    await mkdir(join(testDir, '.codescout'), { recursive: true });
     await writeFile(
-      join(testDir, '.vibeguard', 'config.json'),
+      join(testDir, '.codescout', 'config.json'),
       JSON.stringify({
         ignore: ['custom/**'],
         importance: { weights: { dependents: 10 } },
@@ -42,16 +42,16 @@ describe('Config Store', () => {
   });
 
   it('throws on malformed JSON', async () => {
-    await mkdir(join(testDir, '.vibeguard'), { recursive: true });
-    await writeFile(join(testDir, '.vibeguard', 'config.json'), 'not json', 'utf-8');
+    await mkdir(join(testDir, '.codescout'), { recursive: true });
+    await writeFile(join(testDir, '.codescout', 'config.json'), 'not json', 'utf-8');
 
     await expect(loadConfig(testDir)).rejects.toThrow('malformed JSON');
   });
 
   it('throws on invalid config shape', async () => {
-    await mkdir(join(testDir, '.vibeguard'), { recursive: true });
+    await mkdir(join(testDir, '.codescout'), { recursive: true });
     await writeFile(
-      join(testDir, '.vibeguard', 'config.json'),
+      join(testDir, '.codescout', 'config.json'),
       JSON.stringify({ ignore: 'not-an-array' }),
       'utf-8'
     );

@@ -9,7 +9,7 @@ describe('Cost Estimator', () => {
   let testDir: string;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `vibeguard-cost-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    testDir = join(tmpdir(), `codescout-cost-${Date.now()}-${Math.random().toString(36).slice(2)}`);
     await mkdir(join(testDir, 'src'), { recursive: true });
   });
 

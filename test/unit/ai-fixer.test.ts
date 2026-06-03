@@ -64,8 +64,8 @@ describe('AI Fixer — applyFixes', () => {
 
     const { backupDir } = await applyFixes(dir, plans);
 
-    // Backup dir is under .vibeguard-trash
-    expect(backupDir).toContain('.vibeguard-trash');
+    // Backup dir is under .codescout-trash
+    expect(backupDir).toContain('.codescout-trash');
     let backupExists = true;
     try {
       await access(join(backupDir, 'src/c.ts'));

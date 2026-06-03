@@ -4,10 +4,10 @@ node_modules/
 # Build output
 dist/
 
-# VibeGuard local data (config + regenerated artifacts, never committed)
-.vibeguard/
+# CodeScout local data (config + regenerated artifacts, never committed)
+.codescout/
 # Trash (soft-deleted files)
-.vibeguard-trash/
+.codescout-trash/
 
 # Reference repos (third-party, read-only — never publish)
 takeinspiration/

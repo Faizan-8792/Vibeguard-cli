@@ -41,7 +41,7 @@ async function captureStdout(fn: () => Promise<void>): Promise<string> {
 }
 
 beforeEach(async () => {
-  projectRoot = await mkdtemp(join(tmpdir(), 'vibeguard-caveman-int-'));
+  projectRoot = await mkdtemp(join(tmpdir(), 'codescout-caveman-int-'));
   await writeFile(join(projectRoot, 'package.json'), JSON.stringify({ name: 'fixture', version: '1.0.0' }), 'utf-8');
 });
 
@@ -50,7 +50,7 @@ afterEach(async () => {
 });
 
 describe('Integration: install --caveman enables Caveman in one step', () => {
-  const steeringRel = join('.kiro', 'steering', 'vibeguard-caveman.md');
+  const steeringRel = join('.kiro', 'steering', 'codescout-caveman.md');
 
   it('install enables Caveman by default (one-shot setup)', async () => {
     const ctx = await makeCtx(projectRoot, 'install');
@@ -108,7 +108,7 @@ describe('Integration: install --caveman enables Caveman in one step', () => {
     const state = await loadCavemanState(projectRoot);
     expect(state.enabled).toBe(false);
     const json = JSON.parse(out);
-    expect(json.cavemanRemoved).toContain('.kiro/steering/vibeguard-caveman.md');
+    expect(json.cavemanRemoved).toContain('.kiro/steering/codescout-caveman.md');
   });
 });
 
@@ -141,9 +141,9 @@ describe('Integration: doctor reports Caveman status', () => {
 });
 
 describe('Integration: Caveman multi-IDE rule mirroring', () => {
-  const KIRO = join('.kiro', 'steering', 'vibeguard-caveman.md');
-  const CURSOR = join('.cursor', 'rules', 'vibeguard-caveman.mdc');
-  const WINDSURF = join('.windsurf', 'rules', 'vibeguard-caveman.md');
+  const KIRO = join('.kiro', 'steering', 'codescout-caveman.md');
+  const CURSOR = join('.cursor', 'rules', 'codescout-caveman.mdc');
+  const WINDSURF = join('.windsurf', 'rules', 'codescout-caveman.md');
 
   it('always writes Kiro steering with an ON indicator instruction', async () => {
     const { enableCaveman } = await import('../../src/engines/caveman.js');
@@ -158,8 +158,8 @@ describe('Integration: Caveman multi-IDE rule mirroring', () => {
     const { enableCaveman } = await import('../../src/engines/caveman.js');
     const { written } = await enableCaveman(projectRoot, 'full');
 
-    expect(written).toContain('.cursor/rules/vibeguard-caveman.mdc');
-    expect(written).toContain('.windsurf/rules/vibeguard-caveman.md');
+    expect(written).toContain('.cursor/rules/codescout-caveman.mdc');
+    expect(written).toContain('.windsurf/rules/codescout-caveman.md');
 
     const cursor = await readFile(join(projectRoot, CURSOR), 'utf-8');
     const windsurf = await readFile(join(projectRoot, WINDSURF), 'utf-8');
@@ -180,20 +180,20 @@ describe('Integration: Caveman multi-IDE rule mirroring', () => {
 
     for (const f of ['CLAUDE.md', 'AGENTS.md', '.windsurfrules']) {
       const c = await readFile(join(projectRoot, f), 'utf-8');
-      expect(c).toContain('vibeguard-caveman:begin');
+      expect(c).toContain('codescout-caveman:begin');
       expect(c).toContain('Caveman mode: ON');
     }
 
     // Disable strips the block; existing files keep their original content,
-    // and the file VibeGuard created (AGENTS.md) is removed entirely.
+    // and the file CodeScout created (AGENTS.md) is removed entirely.
     await disableCaveman(projectRoot);
     const claude = await readFile(join(projectRoot, 'CLAUDE.md'), 'utf-8');
     expect(claude).toContain('Notes.');
-    expect(claude).not.toContain('vibeguard-caveman:begin');
+    expect(claude).not.toContain('codescout-caveman:begin');
     expect(await exists(join(projectRoot, 'AGENTS.md'))).toBe(false);
     const windsurfRules = await readFile(join(projectRoot, '.windsurfrules'), 'utf-8');
     expect(windsurfRules).toContain('existing windsurf rules');
-    expect(windsurfRules).not.toContain('vibeguard-caveman:begin');
+    expect(windsurfRules).not.toContain('codescout-caveman:begin');
   });
 
   it('creates the canonical IDE rule files even on a fresh project (Caveman works everywhere)', async () => {
@@ -215,9 +215,9 @@ describe('Integration: Caveman multi-IDE rule mirroring', () => {
 
     const { removed } = await disableCaveman(projectRoot);
     expect(removed).toEqual(expect.arrayContaining([
-      '.kiro/steering/vibeguard-caveman.md',
-      '.cursor/rules/vibeguard-caveman.mdc',
-      '.windsurf/rules/vibeguard-caveman.md',
+      '.kiro/steering/codescout-caveman.md',
+      '.cursor/rules/codescout-caveman.mdc',
+      '.windsurf/rules/codescout-caveman.md',
     ]));
     expect(await exists(join(projectRoot, KIRO))).toBe(false);
     expect(await exists(join(projectRoot, CURSOR))).toBe(false);

@@ -5,7 +5,7 @@
  * it projects tokenized node text into a fixed-dimension vector via feature
  * hashing. This is NOT a neural embedding — it captures lexical/token overlap,
  * not deep semantics — but it runs with zero network calls, zero native builds,
- * and zero extra dependencies, which is exactly VibeGuard's contract. It lets
+ * and zero extra dependencies, which is exactly CodeScout's contract. It lets
  * `search` rank by cosine similarity and gives a clean seam to plug a real
  * provider (OpenAI-compatible / local sentence-transformers) behind an explicit
  * opt-in later, without changing callers.

@@ -15,13 +15,13 @@ export const ErrorCodes = {
 
 export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];
 
-export class VibeguardError extends Error {
+export class CodeScoutError extends Error {
   public readonly code: ErrorCode;
   public readonly details?: Record<string, unknown>;
 
   constructor(code: ErrorCode, message: string, details?: Record<string, unknown>) {
     super(message);
-    this.name = 'VibeguardError';
+    this.name = 'CodeScoutError';
     this.code = code;
     this.details = details;
   }
@@ -50,7 +50,7 @@ export interface ErrorJsonOutput {
   };
 }
 
-export function formatErrorJson(error: VibeguardError): ErrorJsonOutput {
+export function formatErrorJson(error: CodeScoutError): ErrorJsonOutput {
   return {
     schemaVersion: SCHEMA_VERSION,
     error: {
@@ -61,6 +61,6 @@ export function formatErrorJson(error: VibeguardError): ErrorJsonOutput {
   };
 }
 
-export function formatErrorTerminal(error: VibeguardError): string {
+export function formatErrorTerminal(error: CodeScoutError): string {
   return `Error [${error.code}]: ${error.message}`;
 }

@@ -12,7 +12,7 @@ export async function generateHTMLGraph(
   outputPath?: string,
 ): Promise<string> {
   const nodes = Object.values(graphData.nodes);
-  const filePath = outputPath ?? join(projectRoot, '.vibeguard', 'graph.html');
+  const filePath = outputPath ?? join(projectRoot, '.codescout', 'graph.html');
 
   // Build vis.js data
   const visNodes = nodes.map((node) => ({
@@ -86,7 +86,7 @@ function buildHTML(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VibeGuard — Dependency Graph</title>
+  <title>CodeScout — Dependency Graph</title>
   <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -218,7 +218,7 @@ function buildHTML(
 </head>
 <body>
   <div id="header">
-    <h1>🛡️ VibeGuard — Dependency Graph</h1>
+    <h1>🛡️ CodeScout — Dependency Graph</h1>
     <div class="stats">
       <span>${nodeCount}</span> nodes &nbsp;•&nbsp; <span>${edgeCount}</span> edges &nbsp;•&nbsp; Generated ${new Date().toLocaleDateString()}
     </div>

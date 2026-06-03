@@ -6,7 +6,7 @@ import { loadGraph } from '../engines/graph-builder.js';
 import { FileStoreImpl } from '../storage/file-store.js';
 import { emitJson } from '../utils/json-output.js';
 import { header, keyValue, brand, statusIcon, divider } from '../utils/ui.js';
-import { VibeguardError, ErrorCodes } from '../utils/errors.js';
+import { CodeScoutError, ErrorCodes } from '../utils/errors.js';
 
 export interface AddCommandOptions {
   file: string;
@@ -41,7 +41,7 @@ export async function runAdd(ctx: CommandContext, opts: AddCommandOptions): Prom
   const ext = extname(absPath).toLowerCase();
 
   if (ext !== '.pdf') {
-    throw new VibeguardError(
+    throw new CodeScoutError(
       ErrorCodes.PARSE_ERROR,
       `Unsupported file type "${ext}". Currently only .pdf is supported.`,
     );
@@ -50,7 +50,7 @@ export async function runAdd(ctx: CommandContext, opts: AddCommandOptions): Prom
   try {
     await access(absPath);
   } catch {
-    throw new VibeguardError(ErrorCodes.CONFIG_NOT_FOUND, `File not found: ${opts.file}`);
+    throw new CodeScoutError(ErrorCodes.CONFIG_NOT_FOUND, `File not found: ${opts.file}`);
   }
 
   if (!options.json) ctx.logger.startSpinner('Extracting PDF content...');
@@ -60,7 +60,7 @@ export async function runAdd(ctx: CommandContext, opts: AddCommandOptions): Prom
     extraction = await extractPdf(absPath);
   } catch (err) {
     if (!options.json) ctx.logger.stopSpinner(false);
-    throw new VibeguardError(
+    throw new CodeScoutError(
       ErrorCodes.INTERNAL_ERROR,
       `Failed to parse PDF: ${err instanceof Error ? err.message : String(err)}`,
     );
@@ -134,7 +134,7 @@ export async function runAdd(ctx: CommandContext, opts: AddCommandOptions): Prom
     }
 
     output.push(divider());
-    output.push(`  ${statusIcon('success')} ${brand.success('Saved to')} ${brand.muted('.vibeguard/documents.json')}`);
+    output.push(`  ${statusIcon('success')} ${brand.success('Saved to')} ${brand.muted('.codescout/documents.json')}`);
     output.push('');
     process.stdout.write(output.join('\n') + '\n');
   }

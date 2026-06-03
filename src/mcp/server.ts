@@ -1,9 +1,9 @@
 /**
- * VibeGuard MCP server.
+ * CodeScout MCP server.
  *
- * Exposes the VibeGuard engines as live Model Context Protocol tools over stdio,
+ * Exposes the CodeScout engines as live Model Context Protocol tools over stdio,
  * so AI assistants (Claude, Cursor, Copilot, Kiro, etc.) can call them directly
- * instead of shelling out to `npx vibeguard-cli --json` and screen-scraping.
+ * instead of shelling out to `npx codescout-cli --json` and screen-scraping.
  *
  * Uses the low-level Server + setRequestHandler API (rather than the Zod-based
  * McpServer helper) to keep the tool contract a plain JSON schema that mirrors
@@ -40,7 +40,7 @@ export function buildMcpServer(opts: McpServerOptions): { server: Server; tools:
   const toolMap = new Map(tools.map((t) => [t.name, t]));
 
   const server = new Server(
-    { name: 'vibeguard', version: opts.version ?? '0.1.0' },
+    { name: 'codescout', version: opts.version ?? '0.1.0' },
     { capabilities: { tools: {} } },
   );
 

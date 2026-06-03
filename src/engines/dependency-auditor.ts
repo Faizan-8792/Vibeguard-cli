@@ -1,14 +1,14 @@
 /**
  * Dependency Auditor — local-first Software Composition Analysis (SCA).
  *
- * Trivy-inspired, but with VibeGuard's constraints: zero native build, zero
+ * Trivy-inspired, but with CodeScout's constraints: zero native build, zero
  * network. It parses `package.json` + lockfiles, resolves installed versions,
  * and matches them against a *bundled* advisory database (no registry calls).
  * It also flags risky licenses and can emit a CycloneDX-style SBOM.
  *
  * Why bundled, not fetched: the core promise is "works offline, no API key".
  * The advisory set is intentionally small and high-signal; it is the seam where
- * a future `vibeguard advisories update` could refresh a local cache.
+ * a future `codescout advisories update` could refresh a local cache.
  */
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -382,7 +382,7 @@ export function buildSbom(result: DependencyAuditResult): object {
     specVersion: '1.5',
     version: 1,
     metadata: {
-      tools: [{ vendor: 'VibeGuard', name: 'dependency-auditor', version: DEPENDENCY_AUDIT_SCHEMA_VERSION }],
+      tools: [{ vendor: 'CodeScout', name: 'dependency-auditor', version: DEPENDENCY_AUDIT_SCHEMA_VERSION }],
     },
     components,
   };

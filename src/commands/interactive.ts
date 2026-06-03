@@ -78,7 +78,7 @@ export async function runInteractive(ctx: CommandContext): Promise<void> {
         { name: 'Dead Code Detection    — Find unused files & exports', value: 'dead' },
         { name: 'Context Package        — Generate AI context', value: 'pack' },
         { name: 'Trash Manager          — View soft-deleted files', value: 'trash' },
-        { name: 'Initialize Config      — Setup .vibeguard/', value: 'init' },
+        { name: 'Initialize Config      — Setup .codescout/', value: 'init' },
         { name: 'Configure LLM          — Add API key (OpenAI, Gemini, DeepSeek...)', value: 'llm' },
         { name: brand.muted('Exit'), value: 'exit' },
       ],
@@ -159,8 +159,8 @@ async function pauseForReturn(): Promise<void> {
 
 /**
  * Quick Setup: one action = init config + build graph + enable caveman. Makes
- * the project fully ready for VibeGuard in a single menu pick (equivalent to
- * running `npx vibeguard-cli init` from the terminal).
+ * the project fully ready for CodeScout in a single menu pick (equivalent to
+ * running `npx codescout-cli init` from the terminal).
  */
 async function runQuickSetupInteractive(ctx: CommandContext): Promise<void> {
   const output: string[] = [];
@@ -200,7 +200,7 @@ async function runQuickSetupInteractive(ctx: CommandContext): Promise<void> {
  * GraphMode toggle. GraphMode is an independent always-on mode (like Caveman)
  * that writes a rule into every IDE/agent memory file telling the assistant to
  * be graph-first and print a `GraphMode: ON` indicator. ON/OFF is real state in
- * `.vibeguard/graphmode.json`; turning it on also builds the graph so the
+ * `.codescout/graphmode.json`; turning it on also builds the graph so the
  * assistant has data to consult.
  */
 async function runGraphModeInteractive(ctx: CommandContext): Promise<void> {
@@ -272,7 +272,7 @@ async function chooseMapSource(ctx: CommandContext): Promise<void> {
     const prompt = buildMapPrompt(files);
     await copyToClipboard(prompt, 'Map-building prompt copied to clipboard!');
     process.stdout.write(`\n  ${brand.muted('Paste it into your coding agent (with repo access). It will write')}\n`);
-    process.stdout.write(`  ${brand.secondary('.vibeguard/graph.json')}${brand.muted(', then run')} ${brand.info('vibeguard graph')} ${brand.muted('to view it.')}\n`);
+    process.stdout.write(`  ${brand.secondary('.codescout/graph.json')}${brand.muted(', then run')} ${brand.info('codescout graph')} ${brand.muted('to view it.')}\n`);
     return;
   }
 
@@ -289,7 +289,7 @@ async function chooseMapSource(ctx: CommandContext): Promise<void> {
       const result = await generateMapViaLLM(ctx.projectRoot, files, creds);
       ctx.logger.stopSpinner(true);
       process.stdout.write(`\n  ${statusIcon('success')} ${brand.success('Map generated via LLM:')} ${brand.muted(`${result.nodes} files, ${result.edges} edges`)}\n`);
-      process.stdout.write(`  ${brand.muted('View it:')} ${brand.info('vibeguard graph')}\n`);
+      process.stdout.write(`  ${brand.muted('View it:')} ${brand.info('codescout graph')}\n`);
     } catch (err) {
       ctx.logger.stopSpinner(false);
       process.stdout.write(`\n  ${statusIcon('error')} ${brand.danger(err instanceof Error ? err.message : 'LLM map generation failed')}\n`);
@@ -384,7 +384,7 @@ async function ignoreFindingInteractive(ctx: CommandContext, issues: SecurityIss
   choices.push({ name: brand.muted('↩   Back'), value: '__back__' });
 
   const id = await select<string>({
-    message: brand.primary('Which finding should VibeGuard stop flagging?'),
+    message: brand.primary('Which finding should CodeScout stop flagging?'),
     choices,
   });
 
@@ -393,7 +393,7 @@ async function ignoreFindingInteractive(ctx: CommandContext, issues: SecurityIss
   const added = await addIgnoredFindings(ctx.projectRoot, [id]);
   if (added.length > 0) {
     process.stdout.write(`\n  ${statusIcon('success')} ${brand.success(`Ignoring ${id}.`)} ${brand.muted('It will not be flagged again.')}\n`);
-    process.stdout.write(`  ${brand.muted('Undo with:')} ${brand.secondary('vibeguard ignore remove ' + id)}\n`);
+    process.stdout.write(`  ${brand.muted('Undo with:')} ${brand.secondary('codescout ignore remove ' + id)}\n`);
   } else {
     process.stdout.write(`\n  ${statusIcon('info')} ${brand.muted(`${id} was already ignored.`)}\n`);
   }
@@ -638,11 +638,11 @@ async function runMapInteractive(ctx: CommandContext): Promise<void> {
   }
   output.push('');
   output.push(`  ${statusIcon('success')} ${brand.success('Generated:')}`);
-  output.push(`    ${brand.muted('•')} ${brand.secondary('.vibeguard/graph.json')}       ${brand.muted('Dependency data')}`);
-  output.push(`    ${brand.muted('•')} ${brand.secondary('.vibeguard/graph.html')}       ${brand.muted('Interactive visualization')}`);
-  output.push(`    ${brand.muted('•')} ${brand.secondary('.vibeguard/GRAPH_REPORT.md')}  ${brand.muted('Architecture report')}`);
+  output.push(`    ${brand.muted('•')} ${brand.secondary('.codescout/graph.json')}       ${brand.muted('Dependency data')}`);
+  output.push(`    ${brand.muted('•')} ${brand.secondary('.codescout/graph.html')}       ${brand.muted('Interactive visualization')}`);
+  output.push(`    ${brand.muted('•')} ${brand.secondary('.codescout/GRAPH_REPORT.md')}  ${brand.muted('Architecture report')}`);
   output.push('');
-  output.push(`  ${brand.muted('Open the interactive graph:')} ${brand.secondary('vibeguard graph')}`);
+  output.push(`  ${brand.muted('Open the interactive graph:')} ${brand.secondary('codescout graph')}`);
 
   process.stdout.write(output.join('\n') + '\n');
 }
@@ -802,7 +802,7 @@ async function runTrashInteractive(ctx: CommandContext): Promise<void> {
     }
     output.push('');
     output.push(`  ${brand.info('💡 To restore:')}`);
-    output.push(`     ${brand.secondary('npx vibeguard-cli trash restore <id>')}`);
+    output.push(`     ${brand.secondary('npx codescout-cli trash restore <id>')}`);
   }
 
   process.stdout.write(output.join('\n') + '\n');
@@ -815,7 +815,7 @@ async function runInitInteractive(ctx: CommandContext): Promise<void> {
     process.stdout.write(`  ${statusIcon('success')} ${brand.success('Configuration initialized!')}\n`);
   } catch (err) {
     if (err instanceof Error && err.message.includes('already exists')) {
-      process.stdout.write(`  ${statusIcon('info')} ${brand.info('Already initialized. Use')} ${brand.secondary('vibeguard init --force')} ${brand.info('to reset.')}\n`);
+      process.stdout.write(`  ${statusIcon('info')} ${brand.info('Already initialized. Use')} ${brand.secondary('codescout init --force')} ${brand.info('to reset.')}\n`);
     } else {
       throw err;
     }
@@ -1098,7 +1098,7 @@ async function runAIFixFlow(
   const confirm = await selectPrompt<string>({
     message: brand.primary(`Apply these fixes to ${changedPlans.length} file(s)?`),
     choices: [
-      { name: 'Yes, apply (originals backed up to .vibeguard-trash/)', value: 'yes' },
+      { name: 'Yes, apply (originals backed up to .codescout-trash/)', value: 'yes' },
       { name: 'Cancel', value: 'no' },
     ],
   });
@@ -1113,5 +1113,5 @@ async function runAIFixFlow(
 
   process.stdout.write(`\n  ${statusIcon('success')} ${brand.success.bold(`Applied fixes to ${applied} file(s)!`)}\n`);
   process.stdout.write(`  ${brand.muted('Originals backed up to:')} ${brand.secondary(relBackup)}\n`);
-  process.stdout.write(`  ${brand.muted('Re-run')} ${brand.secondary('vibeguard attack')} ${brand.muted('to verify the fixes.')}\n\n`);
+  process.stdout.write(`  ${brand.muted('Re-run')} ${brand.secondary('codescout attack')} ${brand.muted('to verify the fixes.')}\n\n`);
 }

@@ -44,9 +44,9 @@ export async function runMap(ctx: CommandContext): Promise<void> {
         surprisingConnections: report.surprisingConnections.length,
       },
       outputs: {
-        graph: '.vibeguard/graph.json',
-        html: '.vibeguard/graph.html',
-        report: '.vibeguard/GRAPH_REPORT.md',
+        graph: '.codescout/graph.json',
+        html: '.codescout/graph.html',
+        report: '.codescout/GRAPH_REPORT.md',
       },
     });
   } else {
@@ -86,11 +86,11 @@ export async function runMap(ctx: CommandContext): Promise<void> {
     output.push(divider());
     output.push('');
     output.push(`  ${statusIcon('success')} ${brand.success('Generated:')}`);
-    output.push(`    ${brand.muted('•')} ${brand.secondary('.vibeguard/graph.json')}       ${brand.muted('Dependency data')}`);
-    output.push(`    ${brand.muted('•')} ${brand.secondary('.vibeguard/graph.html')}       ${brand.muted('Interactive visualization')}`);
-    output.push(`    ${brand.muted('•')} ${brand.secondary('.vibeguard/GRAPH_REPORT.md')}  ${brand.muted('Architecture report')}`);
+    output.push(`    ${brand.muted('•')} ${brand.secondary('.codescout/graph.json')}       ${brand.muted('Dependency data')}`);
+    output.push(`    ${brand.muted('•')} ${brand.secondary('.codescout/graph.html')}       ${brand.muted('Interactive visualization')}`);
+    output.push(`    ${brand.muted('•')} ${brand.secondary('.codescout/GRAPH_REPORT.md')}  ${brand.muted('Architecture report')}`);
     output.push('');
-    output.push(`  ${brand.muted('Open graph:')} ${brand.secondary('vibeguard graph')}`);
+    output.push(`  ${brand.muted('Open graph:')} ${brand.secondary('codescout graph')}`);
     output.push('');
 
     process.stdout.write(output.join('\n') + '\n');

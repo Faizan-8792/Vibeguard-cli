@@ -19,7 +19,7 @@ async function exists(p: string): Promise<boolean> {
 }
 
 beforeEach(async () => {
-  testDir = join(tmpdir(), `vibeguard-graphmode-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  testDir = join(tmpdir(), `codescout-graphmode-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   await mkdir(testDir, { recursive: true });
 });
 
@@ -45,7 +45,7 @@ describe('GraphMode engine', () => {
 
     expect(await exists(join(testDir, GRAPHMODE_KIRO_STEERING_REL))).toBe(true);
     expect(await exists(join(testDir, GRAPHMODE_CURSOR_RULE_REL))).toBe(true);
-    expect(written).toContain('.kiro/steering/vibeguard-graphmode.md');
+    expect(written).toContain('.kiro/steering/codescout-graphmode.md');
 
     const kiro = await readFile(join(testDir, GRAPHMODE_KIRO_STEERING_REL), 'utf-8');
     expect(kiro).toContain('inclusion: always');
@@ -82,8 +82,8 @@ describe('GraphMode engine', () => {
 
     // CLAUDE.md still holds the caveman block but not the graphmode block.
     const claude = await readFile(join(testDir, 'CLAUDE.md'), 'utf-8');
-    expect(claude).toContain('vibeguard-caveman:begin');
-    expect(claude).not.toContain('vibeguard-graphmode:begin');
+    expect(claude).toContain('codescout-caveman:begin');
+    expect(claude).not.toContain('codescout-graphmode:begin');
   });
 });
 

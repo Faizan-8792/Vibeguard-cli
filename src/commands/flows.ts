@@ -1,5 +1,5 @@
 import type { CommandContext } from '../context.js';
-import { VibeguardError, ErrorCodes } from '../utils/errors.js';
+import { CodeScoutError, ErrorCodes } from '../utils/errors.js';
 import { emitJson } from '../utils/json-output.js';
 import { header, keyValue, divider, statusIcon, filePath, brand } from '../utils/ui.js';
 
@@ -23,7 +23,7 @@ export async function runFlows(ctx: CommandContext, opts: FlowsCommandOptions): 
 
   const graph = await loadGraph(projectRoot);
   if (!graph) {
-    throw new VibeguardError(ErrorCodes.CONFIG_NOT_FOUND, 'No graph found. Run `vibeguard map` first.');
+    throw new CodeScoutError(ErrorCodes.CONFIG_NOT_FOUND, 'No graph found. Run `codescout map` first.');
   }
 
   if (!options.json) logger.startSpinner('Analyzing execution flows...');

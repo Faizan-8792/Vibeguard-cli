@@ -34,7 +34,7 @@ describe('CLI Shell', () => {
 
   it('--help prints usage information', async () => {
     const result = await runCli(['--help']);
-    expect(result.stdout).toContain('vibeguard');
+    expect(result.stdout).toContain('codescout');
     expect(result.stdout).toContain('doctor');
     expect(result.stdout).toContain('security');
     expect(result.stdout).toContain('clean');

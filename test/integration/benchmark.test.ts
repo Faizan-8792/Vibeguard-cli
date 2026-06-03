@@ -12,9 +12,9 @@ describe('Integration: benchmark command', () => {
   let config: ResolvedConfig;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `vibeguard-bench-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    testDir = join(tmpdir(), `codescout-bench-${Date.now()}-${Math.random().toString(36).slice(2)}`);
     await mkdir(join(testDir, 'src'), { recursive: true });
-    await mkdir(join(testDir, '.vibeguard'), { recursive: true });
+    await mkdir(join(testDir, '.codescout'), { recursive: true });
     config = await loadConfig(testDir);
   });
 
@@ -52,10 +52,10 @@ describe('Integration: benchmark command', () => {
     expect(parsed.files).toBeGreaterThanOrEqual(20);
     expect(parsed.baseline.fullReadTokens).toBeGreaterThan(0);
     // Typical query must use fewer tokens than reading everything
-    expect(parsed.vibeguard.typicalQueryTokens).toBeLessThan(parsed.baseline.fullReadTokens);
+    expect(parsed.codescout.typicalQueryTokens).toBeLessThan(parsed.baseline.fullReadTokens);
     expect(parsed.reduction.factor).toBeGreaterThan(1);
     // Graph build cost is always 0 (local)
-    expect(parsed.vibeguard.graphBuildTokens).toBe(0);
+    expect(parsed.codescout.graphBuildTokens).toBe(0);
   });
 
   it('honors a custom chars-per-token divisor', async () => {

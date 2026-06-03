@@ -19,7 +19,7 @@ describe('Property 32: Cost Estimation Formula', () => {
         ),
         async (fileSpecs) => {
           const dir = await mkdtemp(join(tmpdir(), 'vg-cost-'));
-          await mkdir(join(dir, '.vibeguard'), { recursive: true });
+          await mkdir(join(dir, '.codescout'), { recursive: true });
 
           const files: string[] = [];
           for (const spec of fileSpecs) {
@@ -53,7 +53,7 @@ describe('Property 32: Cost Estimation Formula', () => {
 
   it('more lines produce more tokens for same extension', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'vg-cost-'));
-    await mkdir(join(dir, '.vibeguard'), { recursive: true });
+    await mkdir(join(dir, '.codescout'), { recursive: true });
 
     // Small file
     await writeFile(join(dir, 'small.ts'), 'const x = 1;\n', 'utf-8');
@@ -71,7 +71,7 @@ describe('Property 32: Cost Estimation Formula', () => {
 
   it('empty file list produces zero tokens', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'vg-cost-'));
-    await mkdir(join(dir, '.vibeguard'), { recursive: true });
+    await mkdir(join(dir, '.codescout'), { recursive: true });
 
     const config = await loadConfig(dir);
     const result = await estimateCost([], dir, config);

@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { VibeguardError, ErrorCodes } from '../utils/errors.js';
+import { CodeScoutError, ErrorCodes } from '../utils/errors.js';
 import { FileStoreImpl } from './file-store.js';
 
 export interface TagRule {
@@ -20,7 +20,7 @@ export interface ModelConfig {
   pricePer1K: number;
 }
 
-export interface VibeguardConfig {
+export interface CodeScoutConfig {
   ignore: string[];
   tags: { customRules: TagRule[] };
   importance: { weights: ImportanceWeights };
@@ -38,12 +38,12 @@ export interface VibeguardConfig {
   limits: { maxFilesPerRun: number };
 }
 
-export interface ResolvedConfig extends VibeguardConfig {
+export interface ResolvedConfig extends CodeScoutConfig {
   effectiveSkipSet: string[];
   effectiveInclude: string[];
 }
 
-export const DEFAULT_CONFIG: VibeguardConfig = {
+export const DEFAULT_CONFIG: CodeScoutConfig = {
   ignore: [
     // Dependencies & build output — match at ANY depth (monorepos put these
     // under client/, server/, packages/*, etc., not just the repo root).
@@ -91,8 +91,8 @@ export const DEFAULT_CONFIG: VibeguardConfig = {
     '**/*.spec.ts',
     '**/*.spec.tsx',
     '**/*.spec.js',
-    '.vibeguard/**',
-    '.vibeguard-trash/**',
+    '.codescout/**',
+    '.codescout-trash/**',
   ],
   tags: { customRules: [] },
   importance: {
@@ -119,45 +119,45 @@ const DEFAULT_EXTENSIONS = [
   '**/*.md', '**/*.mdx',
 ];
 
-function validateConfig(data: unknown): VibeguardConfig {
+function validateConfig(data: unknown): CodeScoutConfig {
   if (typeof data !== 'object' || data === null || Array.isArray(data)) {
-    throw new VibeguardError(ErrorCodes.CONFIG_INVALID, 'Config must be a JSON object');
+    throw new CodeScoutError(ErrorCodes.CONFIG_INVALID, 'Config must be a JSON object');
   }
 
   const obj = data as Record<string, unknown>;
 
   // Validate ignore
   if (obj.ignore !== undefined && !Array.isArray(obj.ignore)) {
-    throw new VibeguardError(ErrorCodes.CONFIG_INVALID, 'Config key "ignore" must be an array', { key: 'ignore' });
+    throw new CodeScoutError(ErrorCodes.CONFIG_INVALID, 'Config key "ignore" must be an array', { key: 'ignore' });
   }
 
   // Validate importance.weights
   if (obj.importance !== undefined) {
     if (typeof obj.importance !== 'object' || obj.importance === null) {
-      throw new VibeguardError(ErrorCodes.CONFIG_INVALID, 'Config key "importance" must be an object', { key: 'importance' });
+      throw new CodeScoutError(ErrorCodes.CONFIG_INVALID, 'Config key "importance" must be an object', { key: 'importance' });
     }
     const imp = obj.importance as Record<string, unknown>;
     if (imp.weights !== undefined && typeof imp.weights !== 'object') {
-      throw new VibeguardError(ErrorCodes.CONFIG_INVALID, 'Config key "importance.weights" must be an object', { key: 'importance.weights' });
+      throw new CodeScoutError(ErrorCodes.CONFIG_INVALID, 'Config key "importance.weights" must be an object', { key: 'importance.weights' });
     }
   }
 
   // Validate context
   if (obj.context !== undefined) {
     if (typeof obj.context !== 'object' || obj.context === null) {
-      throw new VibeguardError(ErrorCodes.CONFIG_INVALID, 'Config key "context" must be an object', { key: 'context' });
+      throw new CodeScoutError(ErrorCodes.CONFIG_INVALID, 'Config key "context" must be an object', { key: 'context' });
     }
     const ctx = obj.context as Record<string, unknown>;
     if (ctx.defaultRadius !== undefined && typeof ctx.defaultRadius !== 'number') {
-      throw new VibeguardError(ErrorCodes.CONFIG_INVALID, 'Config key "context.defaultRadius" must be a number', { key: 'context.defaultRadius' });
+      throw new CodeScoutError(ErrorCodes.CONFIG_INVALID, 'Config key "context.defaultRadius" must be a number', { key: 'context.defaultRadius' });
     }
     if (ctx.defaultTokenBudget !== undefined && typeof ctx.defaultTokenBudget !== 'number') {
-      throw new VibeguardError(ErrorCodes.CONFIG_INVALID, 'Config key "context.defaultTokenBudget" must be a number', { key: 'context.defaultTokenBudget' });
+      throw new CodeScoutError(ErrorCodes.CONFIG_INVALID, 'Config key "context.defaultTokenBudget" must be a number', { key: 'context.defaultTokenBudget' });
     }
   }
 
   // Merge with defaults
-  const config: VibeguardConfig = {
+  const config: CodeScoutConfig = {
     ignore: (obj.ignore as string[]) ?? DEFAULT_CONFIG.ignore,
     tags: {
       customRules: ((obj.tags as Record<string, unknown>)?.customRules as TagRule[]) ?? DEFAULT_CONFIG.tags.customRules,
@@ -196,9 +196,9 @@ export async function loadConfig(
   cliInclude?: string[],
   cliExclude?: string[]
 ): Promise<ResolvedConfig> {
-  const filePath = configPath ?? join(projectRoot, '.vibeguard', 'config.json');
+  const filePath = configPath ?? join(projectRoot, '.codescout', 'config.json');
 
-  let config: VibeguardConfig;
+  let config: CodeScoutConfig;
 
   try {
     const content = await readFile(filePath, 'utf-8');
@@ -206,11 +206,11 @@ export async function loadConfig(
     try {
       parsed = JSON.parse(content);
     } catch {
-      throw new VibeguardError(ErrorCodes.CONFIG_INVALID, 'Config file contains malformed JSON', { path: filePath });
+      throw new CodeScoutError(ErrorCodes.CONFIG_INVALID, 'Config file contains malformed JSON', { path: filePath });
     }
     config = validateConfig(parsed);
   } catch (err) {
-    if (err instanceof VibeguardError) throw err;
+    if (err instanceof CodeScoutError) throw err;
     // File doesn't exist — use defaults
     config = { ...DEFAULT_CONFIG };
   }
@@ -226,13 +226,13 @@ export async function loadConfig(
 }
 
 /**
- * Add one or more finding IDs to `security.ignore` in `.vibeguard/config.json`,
+ * Add one or more finding IDs to `security.ignore` in `.codescout/config.json`,
  * creating the config from defaults if it does not yet exist. Existing user
  * settings are preserved; ignore IDs are de-duplicated. Returns the IDs that
  * were newly added (already-ignored IDs are skipped).
  */
 export async function addIgnoredFindings(projectRoot: string, ids: string[]): Promise<string[]> {
-  const filePath = join(projectRoot, '.vibeguard', 'config.json');
+  const filePath = join(projectRoot, '.codescout', 'config.json');
 
   let raw: Record<string, unknown> = {};
   try {
@@ -271,7 +271,7 @@ export async function addIgnoredFindings(projectRoot: string, ids: string[]): Pr
 
 /** Remove finding IDs from `security.ignore`. Returns the IDs actually removed. */
 export async function removeIgnoredFindings(projectRoot: string, ids: string[]): Promise<string[]> {
-  const filePath = join(projectRoot, '.vibeguard', 'config.json');
+  const filePath = join(projectRoot, '.codescout', 'config.json');
 
   let raw: Record<string, unknown>;
   try {

@@ -28,9 +28,9 @@ const brand = {
 // ─── Banner ─────────────────────────────────────────────────────────────────
 export function banner(): string {
   const logo = brand.primary.bold(`
-  ╦  ╦╦╔╗ ╔═╗╔═╗╦ ╦╔═╗╦═╗╔╦╗
-  ╚╗╔╝║╠╩╗║╣ ║ ╦║ ║╠═╣╠╦╝ ║║
-   ╚╝ ╩╚═╝╚═╝╚═╝╚═╝╩ ╩╩╚══╩╝`);
+  ╔═╗╔═╗╔╦╗╔═╗╔═╗╔═╗╔═╗╦ ╦╔╦╗
+  ║  ║ ║ ║║║╣ ╚═╗║  ║ ║║ ║ ║ 
+  ╚═╝╚═╝═╩╝╚═╝╚═╝╚═╝╚═╝╚═╝ ╩ `);
 
   const tagline = brand.muted('  Local-only static analysis & AI context packaging\n');
   return logo + '\n' + tagline;
@@ -218,20 +218,20 @@ export function quickStart(): string {
 
   lines.push(`  ${brand.primary.bold('Quick Start')}`);
   lines.push('');
-  lines.push(`  ${brand.secondary('$')} ${chalk.white('npx vibeguard-cli --scan')}       ${brand.muted('Scan for security issues')}`);
-  lines.push(`  ${brand.secondary('$')} ${chalk.white('npx vibeguard-cli --health')}     ${brand.muted('Get project health score')}`);
-  lines.push(`  ${brand.secondary('$')} ${chalk.white('npx vibeguard-cli --graph')}      ${brand.muted('Build dependency graph')}`);
-  lines.push(`  ${brand.secondary('$')} ${chalk.white('npx vibeguard-cli --dead')}       ${brand.muted('Detect dead code')}`);
+  lines.push(`  ${brand.secondary('$')} ${chalk.white('npx codescout-cli --scan')}       ${brand.muted('Scan for security issues')}`);
+  lines.push(`  ${brand.secondary('$')} ${chalk.white('npx codescout-cli --health')}     ${brand.muted('Get project health score')}`);
+  lines.push(`  ${brand.secondary('$')} ${chalk.white('npx codescout-cli --graph')}      ${brand.muted('Build dependency graph')}`);
+  lines.push(`  ${brand.secondary('$')} ${chalk.white('npx codescout-cli --dead')}       ${brand.muted('Detect dead code')}`);
   lines.push('');
   lines.push(`  ${brand.primary.bold('Commands')}`);
   lines.push('');
-  lines.push(`  ${brand.secondary('$')} ${chalk.white('vibeguard init')}             ${brand.muted('Initialize configuration')}`);
-  lines.push(`  ${brand.secondary('$')} ${chalk.white('vibeguard map')}              ${brand.muted('Build dependency graph')}`);
-  lines.push(`  ${brand.secondary('$')} ${chalk.white('vibeguard security')}         ${brand.muted('Security scan')}`);
-  lines.push(`  ${brand.secondary('$')} ${chalk.white('vibeguard doctor')}           ${brand.muted('Project health score')}`);
-  lines.push(`  ${brand.secondary('$')} ${chalk.white('vibeguard pack "task"')}      ${brand.muted('AI context package')}`);
-  lines.push(`  ${brand.secondary('$')} ${chalk.white('vibeguard clean --plan')}     ${brand.muted('Dead code detection')}`);
-  lines.push(`  ${brand.secondary('$')} ${chalk.white('vibeguard trash list')}       ${brand.muted('Manage deleted files')}`);
+  lines.push(`  ${brand.secondary('$')} ${chalk.white('codescout init')}             ${brand.muted('Initialize configuration')}`);
+  lines.push(`  ${brand.secondary('$')} ${chalk.white('codescout map')}              ${brand.muted('Build dependency graph')}`);
+  lines.push(`  ${brand.secondary('$')} ${chalk.white('codescout security')}         ${brand.muted('Security scan')}`);
+  lines.push(`  ${brand.secondary('$')} ${chalk.white('codescout doctor')}           ${brand.muted('Project health score')}`);
+  lines.push(`  ${brand.secondary('$')} ${chalk.white('codescout pack "task"')}      ${brand.muted('AI context package')}`);
+  lines.push(`  ${brand.secondary('$')} ${chalk.white('codescout clean --plan')}     ${brand.muted('Dead code detection')}`);
+  lines.push(`  ${brand.secondary('$')} ${chalk.white('codescout trash list')}       ${brand.muted('Manage deleted files')}`);
   lines.push('');
   lines.push(`  ${brand.muted('Add --json to any command for machine-readable output')}`);
   lines.push(`  ${brand.muted('Add --help to any command for detailed usage')}`);

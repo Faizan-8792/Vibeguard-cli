@@ -5,19 +5,19 @@ import { FileStoreImpl } from '../storage/file-store.js';
 /**
  * GraphMode — graph-first context for AI coding assistants.
  *
- * When enabled, VibeGuard writes an always-on rule into every major IDE/agent
+ * When enabled, CodeScout writes an always-on rule into every major IDE/agent
  * memory file instructing the assistant to (a) print a visible `GraphMode: ON`
  * indicator on every reply, and (b) consult the local dependency graph
- * (`.vibeguard/graph.json`) and `pack` the few relevant files instead of
+ * (`.codescout/graph.json`) and `pack` the few relevant files instead of
  * blindly reading the whole repo — the core token-saving behavior.
  *
  * It is fully independent of Caveman Mode: either can be on/off without
- * affecting the other. State is local-only in `.vibeguard/graphmode.json`.
+ * affecting the other. State is local-only in `.codescout/graphmode.json`.
  */
 
 export const GRAPHMODE_SCHEMA_VERSION = '1.0.0';
 
-/** Persisted GraphMode state (local-only, lives in `.vibeguard/graphmode.json`). */
+/** Persisted GraphMode state (local-only, lives in `.codescout/graphmode.json`). */
 export interface GraphModeState {
   schemaVersion: string;
   enabled: boolean;
@@ -35,7 +35,7 @@ export function defaultGraphModeState(): GraphModeState {
   };
 }
 
-/** Load GraphMode state from `.vibeguard/graphmode.json`, falling back to defaults. */
+/** Load GraphMode state from `.codescout/graphmode.json`, falling back to defaults. */
 export async function loadGraphModeState(projectRoot: string): Promise<GraphModeState> {
   const store = new FileStoreImpl(projectRoot);
   const raw = await store.read<Partial<GraphModeState>>(STATE_FILE);
@@ -47,7 +47,7 @@ export async function loadGraphModeState(projectRoot: string): Promise<GraphMode
   };
 }
 
-/** Persist GraphMode state to `.vibeguard/graphmode.json`. */
+/** Persist GraphMode state to `.codescout/graphmode.json`. */
 export async function saveGraphModeState(projectRoot: string, state: GraphModeState): Promise<void> {
   const store = new FileStoreImpl(projectRoot);
   await store.write(STATE_FILE, state);
@@ -58,7 +58,7 @@ export async function saveGraphModeState(projectRoot: string, state: GraphModeSt
  * so every reply is graph-first and shows the indicator.
  */
 export function graphModeRuleBody(): string {
-  return `# VibeGuard GraphMode — ACTIVE
+  return `# CodeScout GraphMode — ACTIVE
 
 Graph-first context. Use the local dependency graph instead of reading the
 whole repo, so answers stay cheap and focused.
@@ -77,10 +77,10 @@ This rule is ACTIVE on EVERY response until the user says "stop graphmode" or
 
 ## Core rules
 - Before answering architecture questions or making multi-file changes, run
-  \`npx vibeguard-cli pack "<task>" --json\` and read ONLY the listed files (5-15).
-- Use \`.vibeguard/graph.json\` to understand imports/dependents before editing.
+  \`npx codescout-cli pack "<task>" --json\` and read ONLY the listed files (5-15).
+- Use \`.codescout/graph.json\` to understand imports/dependents before editing.
 - Never read the entire project blindly — the graph tells you what's connected.
-- Prefer \`npx vibeguard-cli query\`, \`explain\`, \`affected\` for graph Q&A (zero tokens).
+- Prefer \`npx codescout-cli query\`, \`explain\`, \`affected\` for graph Q&A (zero tokens).
 
 > The win: 80-95% fewer tokens by reading the right files, not all the files.`;
 }
@@ -89,7 +89,7 @@ This rule is ACTIVE on EVERY response until the user says "stop graphmode" or
 export function buildGraphModeKiroSteering(): string {
   return `---
 inclusion: always
-description: VibeGuard GraphMode — graph-first, token-saving context on every turn
+description: CodeScout GraphMode — graph-first, token-saving context on every turn
 ---
 ${graphModeRuleBody()}
 `;
@@ -98,7 +98,7 @@ ${graphModeRuleBody()}
 /** Cursor rule file content (always applied). */
 export function buildGraphModeCursorRule(): string {
   return `---
-description: VibeGuard GraphMode — graph-first context selection
+description: CodeScout GraphMode — graph-first context selection
 alwaysApply: true
 ---
 ${graphModeRuleBody()}
@@ -109,7 +109,7 @@ ${graphModeRuleBody()}
 export function buildGraphModeWindsurfRule(): string {
   return `---
 trigger: always_on
-description: VibeGuard GraphMode — graph-first, token-saving context
+description: CodeScout GraphMode — graph-first, token-saving context
 ---
 ${graphModeRuleBody()}
 `;
@@ -125,12 +125,12 @@ export function buildGraphModePlainRule(): string {
 // two modes never overwrite each other and can be toggled independently.
 // ---------------------------------------------------------------------------
 
-export const GRAPHMODE_BEGIN_MARK = '<!-- vibeguard-graphmode:begin -->';
-export const GRAPHMODE_END_MARK = '<!-- vibeguard-graphmode:end -->';
+export const GRAPHMODE_BEGIN_MARK = '<!-- codescout-graphmode:begin -->';
+export const GRAPHMODE_END_MARK = '<!-- codescout-graphmode:end -->';
 
-export const GRAPHMODE_KIRO_STEERING_REL = join('.kiro', 'steering', 'vibeguard-graphmode.md');
-export const GRAPHMODE_CURSOR_RULE_REL = join('.cursor', 'rules', 'vibeguard-graphmode.mdc');
-export const GRAPHMODE_WINDSURF_RULE_REL = join('.windsurf', 'rules', 'vibeguard-graphmode.md');
+export const GRAPHMODE_KIRO_STEERING_REL = join('.kiro', 'steering', 'codescout-graphmode.md');
+export const GRAPHMODE_CURSOR_RULE_REL = join('.cursor', 'rules', 'codescout-graphmode.mdc');
+export const GRAPHMODE_WINDSURF_RULE_REL = join('.windsurf', 'rules', 'codescout-graphmode.md');
 const CLAUDE_REL = 'CLAUDE.md';
 const COPILOT_REL = join('.github', 'copilot-instructions.md');
 const GEMINI_REL = join('.gemini', 'CONTEXT.md');

@@ -64,7 +64,7 @@ describe('Integration: init command', () => {
     await removeTempProject(projectDir);
   });
 
-  it('creates .vibeguard/config.json', async () => {
+  it('creates .codescout/config.json', async () => {
     const result = await runCli(['init', '--json'], projectDir);
     expect(result.exitCode).toBe(0);
 
@@ -73,7 +73,7 @@ describe('Integration: init command', () => {
     expect(parsed.message).toContain('Initialized');
 
     // Verify file exists
-    const configContent = await readFile(join(projectDir, '.vibeguard', 'config.json'), 'utf-8');
+    const configContent = await readFile(join(projectDir, '.codescout', 'config.json'), 'utf-8');
     const config = JSON.parse(configContent);
     expect(config.ignore).toBeDefined();
     expect(Array.isArray(config.ignore)).toBe(true);
@@ -116,11 +116,11 @@ describe('Integration: map command', () => {
     expect(parsed.schemaVersion).toBe('1.0.0');
     expect(parsed.summary.nodes).toBeGreaterThanOrEqual(2);
     expect(parsed.summary.edges).toBeGreaterThanOrEqual(0);
-    expect(parsed.outputs.graph).toBe('.vibeguard/graph.json');
+    expect(parsed.outputs.graph).toBe('.codescout/graph.json');
   });
 
   it('creates graph.json file', async () => {
-    const graphContent = await readFile(join(projectDir, '.vibeguard', 'graph.json'), 'utf-8');
+    const graphContent = await readFile(join(projectDir, '.codescout', 'graph.json'), 'utf-8');
     const graph = JSON.parse(graphContent);
     expect(graph.schemaVersion).toBe('2.2.0');
     expect(graph.nodes).toBeDefined();
@@ -205,15 +205,15 @@ describe('Integration: pack command', () => {
     expect(parsed.selectedFiles).toBeDefined();
     expect(parsed.tokenEstimates).toBeDefined();
     expect(parsed.packagePaths).toBeDefined();
-    expect(parsed.packagePaths.md).toBe('.vibeguard/context-package.md');
-    expect(parsed.packagePaths.json).toBe('.vibeguard/context-package.json');
+    expect(parsed.packagePaths.md).toBe('.codescout/context-package.md');
+    expect(parsed.packagePaths.json).toBe('.codescout/context-package.json');
   });
 
   it('creates context-package.md and .json files', async () => {
-    const mdContent = await readFile(join(projectDir, '.vibeguard', 'context-package.md'), 'utf-8');
+    const mdContent = await readFile(join(projectDir, '.codescout', 'context-package.md'), 'utf-8');
     expect(mdContent).toContain('Context Package');
 
-    const jsonContent = await readFile(join(projectDir, '.vibeguard', 'context-package.json'), 'utf-8');
+    const jsonContent = await readFile(join(projectDir, '.codescout', 'context-package.json'), 'utf-8');
     const pkg = JSON.parse(jsonContent);
     expect(pkg.schemaVersion).toBe('1.0.0');
     expect(pkg.task).toContain('auth');

@@ -2,102 +2,102 @@ import { mkdir, writeFile, readFile, access } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { statusIcon, brand, header } from '../utils/ui.js';
 import { emitJson } from '../utils/json-output.js';
-import { VibeguardError, ErrorCodes } from '../utils/errors.js';
+import { CodeScoutError, ErrorCodes } from '../utils/errors.js';
 import type { CommandContext } from '../context.js';
 import type { CavemanLevel } from '../engines/caveman.js';
 
 const SKILL_CONTENT = `---
-name: vibeguard
-description: Local-only static analysis, security scanning, dead code detection, and AI context packaging. Trigger with /vibeguard.
+name: codescout
+description: Local-only static analysis, security scanning, dead code detection, and AI context packaging. Trigger with /codescout.
 ---
-# VibeGuard Skill
+# CodeScout Skill
 
 Local-only TypeScript/JavaScript static analysis, security scanning, dead code detection, and AI context packaging.
 
 ## Trigger
 
-When the user types \`/vibeguard\` followed by a command, execute the corresponding action.
+When the user types \`/codescout\` followed by a command, execute the corresponding action.
 
 ## Commands
 
-### \`/vibeguard scan\`
+### \`/codescout scan\`
 Run security scan on the current project. Detect hard-coded secrets, .env/.gitignore gaps, and framework misuse.
 
-Execute: \`npx vibeguard-cli security --json\`
+Execute: \`npx codescout-cli security --json\`
 
 Parse the JSON output and present issues with severity, file, line, message, and suggested fix.
 
-### \`/vibeguard health\`
+### \`/codescout health\`
 Get project health score (0-100) with sub-scores.
 
-Execute: \`npx vibeguard-cli doctor --json\`
+Execute: \`npx codescout-cli doctor --json\`
 
-### \`/vibeguard pack <task>\`
+### \`/codescout pack <task>\`
 Generate an optimized context package for a specific task (80-95% token reduction).
 
-Execute: \`npx vibeguard-cli pack "<task>" --json\`
+Execute: \`npx codescout-cli pack "<task>" --json\`
 
-After generating, read \`.vibeguard/context-package.md\` and use it as context.
+After generating, read \`.codescout/context-package.md\` and use it as context.
 
-### \`/vibeguard dead\`
+### \`/codescout dead\`
 Detect dead code: unused files, unused exports.
 
-Execute: \`npx vibeguard-cli clean --plan --json\`
+Execute: \`npx codescout-cli clean --plan --json\`
 
-### \`/vibeguard map\`
+### \`/codescout map\`
 Rebuild the dependency graph (run once after big code changes).
 
-Execute: \`npx vibeguard-cli map --json\`
+Execute: \`npx codescout-cli map --json\`
 
-### \`/vibeguard context <task>\`
+### \`/codescout context <task>\`
 Generate context package and auto-include it in the conversation.
 
 Execute:
-1. \`npx vibeguard-cli pack "<task>" --json\`
-2. Read \`.vibeguard/context-package.md\`
+1. \`npx codescout-cli pack "<task>" --json\`
+2. Read \`.codescout/context-package.md\`
 3. Use as context for subsequent responses
 
-### \`/vibeguard fix\`
+### \`/codescout fix\`
 Auto-fix security issues.
 
-Execute: \`npx vibeguard-cli security --fix=gitignore\`
+Execute: \`npx codescout-cli security --fix=gitignore\`
 
-### \`/vibeguard\`
+### \`/codescout\`
 Show available commands.
 
 ## Notes
 - All commands are local-only, no network calls
-- Results cached in \`.vibeguard/\` for incremental rebuilds
+- Results cached in \`.codescout/\` for incremental rebuilds
 - Use \`pack\` before complex questions to reduce tokens by 80-95%
 `;
 
 const STEERING_CONTENT = `---
 inclusion: auto
 ---
-# VibeGuard Guide — Always-On Context
+# CodeScout Guide — Always-On Context
 
 > Auto-loaded guidance file. You do NOT pick this in the chat box. To run
-> VibeGuard, pick the **\`vibeguard\` skill** (or type \`/vibeguard <task>\`) —
+> CodeScout, pick the **\`codescout\` skill** (or type \`/codescout <task>\`) —
 > that builds the map and packs context automatically.
 
-VibeGuard is installed in this project. Type \`/vibeguard\` in chat to use it.
+CodeScout is installed in this project. Type \`/codescout\` in chat to use it.
 
 ## Quick Commands
-- \`/vibeguard scan\` — Security scan with fixes
-- \`/vibeguard health\` — Project health score
-- \`/vibeguard pack "task"\` — Optimized context (80-95% fewer tokens)
-- \`/vibeguard context "task"\` — Generate and auto-include context
-- \`/vibeguard dead\` — Dead code detection
-- \`/vibeguard map\` — Rebuild the dependency graph (local, no tokens)
-- \`/vibeguard fix\` — Auto-fix security issues
+- \`/codescout scan\` — Security scan with fixes
+- \`/codescout health\` — Project health score
+- \`/codescout pack "task"\` — Optimized context (80-95% fewer tokens)
+- \`/codescout context "task"\` — Generate and auto-include context
+- \`/codescout dead\` — Dead code detection
+- \`/codescout map\` — Rebuild the dependency graph (local, no tokens)
+- \`/codescout fix\` — Auto-fix security issues
 
 ## When to Use
-- Before architecture questions: \`/vibeguard pack "question"\`
-- Before making changes: \`/vibeguard context "task"\`
-- After changes: \`/vibeguard scan\`
-- Periodically: \`/vibeguard health\`
+- Before architecture questions: \`/codescout pack "question"\`
+- Before making changes: \`/codescout context "task"\`
+- After changes: \`/codescout scan\`
+- Periodically: \`/codescout health\`
 
-#[[file:.vibeguard/context-package.md]]
+#[[file:.codescout/context-package.md]]
 `;
 
 const SUPPORTED_PLATFORMS = ['kiro', 'cursor', 'claude', 'copilot', 'gemini', 'aider', 'vscode', 'codex', 'antigravity'] as const;
@@ -108,7 +108,7 @@ function normalizePlatform(platform: string): SupportedPlatform {
     return platform as SupportedPlatform;
   }
 
-  throw new VibeguardError(
+  throw new CodeScoutError(
     ErrorCodes.UNKNOWN_OPTION,
     `Unknown install platform: "${platform}". Valid platforms: ${SUPPORTED_PLATFORMS.join(', ')}`,
     { platform, validPlatforms: [...SUPPORTED_PLATFORMS] },
@@ -128,9 +128,9 @@ async function withSuppressedStdout<T>(enabled: boolean, fn: () => Promise<T>): 
 }
 
 /**
- * Write or merge a VibeGuard MCP server entry into a platform's MCP config file.
+ * Write or merge a CodeScout MCP server entry into a platform's MCP config file.
  * Merges into any existing config so other MCP servers are preserved.
- * Uses `npx -y vibeguard-cli serve` so it works on any machine without absolute paths.
+ * Uses `npx -y codescout-cli serve` so it works on any machine without absolute paths.
  */
 async function writeMcpConfig(
   projectRoot: string,
@@ -154,9 +154,9 @@ async function writeMcpConfig(
   const servers: Record<string, unknown> =
     existing && typeof existing === 'object' ? (existing as Record<string, unknown>) : {};
 
-  servers['vibeguard'] = {
+  servers['codescout'] = {
     command: 'npx',
-    args: ['-y', 'vibeguard-cli', 'serve'],
+    args: ['-y', 'codescout-cli', 'serve'],
     disabled: false,
     autoApprove: [
       'get_minimal_context',
@@ -173,7 +173,7 @@ async function writeMcpConfig(
 }
 
 /**
- * Remove the VibeGuard entry from a platform's MCP config, preserving any other
+ * Remove the CodeScout entry from a platform's MCP config, preserving any other
  * MCP servers and removing the file only when it becomes empty.
  */
 async function removeMcpConfig(
@@ -192,11 +192,11 @@ async function removeMcpConfig(
   }
 
   const servers = config[serverKey];
-  if (!servers || typeof servers !== 'object' || !(servers as Record<string, unknown>)['vibeguard']) {
+  if (!servers || typeof servers !== 'object' || !(servers as Record<string, unknown>)['codescout']) {
     return { removed: false, path: normalizedPath };
   }
 
-  delete (servers as Record<string, unknown>)['vibeguard'];
+  delete (servers as Record<string, unknown>)['codescout'];
 
   if (Object.keys(servers as Record<string, unknown>).length === 0) {
     const { rm } = await import('node:fs/promises');
@@ -254,11 +254,11 @@ export async function runInstall(
   // built — regardless of which IDE was targeted. Each step is non-fatal so a
   // failure in one (e.g. graph build on a huge repo) never blocks the others.
 
-  // 1) Ensure `.vibeguard/config.json` exists (every platform, not just Kiro).
-  const configCreated = await ensureVibeguardConfig(projectRoot);
+  // 1) Ensure `.codescout/config.json` exists (every platform, not just Kiro).
+  const configCreated = await ensureCodeScoutConfig(projectRoot);
   if (configCreated && !jsonMode) {
     process.stdout.write(
-      `  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.vibeguard/config.json')}\n`,
+      `  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.codescout/config.json')}\n`,
     );
   }
 
@@ -268,7 +268,7 @@ export async function runInstall(
     const { enableCaveman, isCavemanLevel, DEFAULT_CAVEMAN_LEVEL } = await import('../engines/caveman.js');
     const requested = typeof opts.caveman === 'string' ? opts.caveman : undefined;
     if (requested !== undefined && !isCavemanLevel(requested)) {
-      throw new VibeguardError(
+      throw new CodeScoutError(
         ErrorCodes.UNKNOWN_OPTION,
         `Unknown caveman level: "${requested}". Valid levels: lite, full, ultra`,
       );
@@ -300,7 +300,7 @@ export async function runInstall(
       mapError = err instanceof Error ? err.message : String(err);
       if (!jsonMode) {
         process.stdout.write(
-          `  ${statusIcon('warning')} ${brand.muted(`Skipped graph build: ${mapError}. Run \`vibeguard map\` later.`)}\n`,
+          `  ${statusIcon('warning')} ${brand.muted(`Skipped graph build: ${mapError}. Run \`codescout map\` later.`)}\n`,
         );
       }
     }
@@ -322,12 +322,12 @@ export async function runInstall(
 }
 
 /**
- * Ensure `.vibeguard/config.json` exists, creating it from defaults when absent.
+ * Ensure `.codescout/config.json` exists, creating it from defaults when absent.
  * Returns true when a new config was written, false when one already existed.
  * Shared by every platform so a single `install` always leaves a valid config.
  */
-async function ensureVibeguardConfig(projectRoot: string): Promise<boolean> {
-  const configPath = join(projectRoot, '.vibeguard', 'config.json');
+async function ensureCodeScoutConfig(projectRoot: string): Promise<boolean> {
+  const configPath = join(projectRoot, '.codescout', 'config.json');
   try {
     await access(configPath);
     return false;
@@ -352,7 +352,7 @@ async function ensureVibeguardConfig(projectRoot: string): Promise<boolean> {
 
 /**
  * Build (or incrementally refresh) the dependency graph as part of install, so
- * the agent has a usable map without a separate `vibeguard map` step. Reuses the
+ * the agent has a usable map without a separate `codescout map` step. Reuses the
  * resolved config from the command context and runs quietly.
  */
 async function buildInstallGraph(ctx: CommandContext): Promise<{ nodes: number; edges: number }> {
@@ -367,27 +367,27 @@ async function buildInstallGraph(ctx: CommandContext): Promise<{ nodes: number; 
 async function installKiro(projectRoot: string): Promise<void> {
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard Install'));
+  output.push(header('CodeScout Install'));
   output.push('');
 
   // Create skill directory
-  const skillDir = join(projectRoot, '.kiro', 'skills', 'vibeguard');
+  const skillDir = join(projectRoot, '.kiro', 'skills', 'codescout');
   await mkdir(skillDir, { recursive: true });
   await writeFile(join(skillDir, 'SKILL.md'), SKILL_CONTENT, 'utf-8');
-  output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.kiro/skills/vibeguard/SKILL.md')}`);
+  output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.kiro/skills/codescout/SKILL.md')}`);
 
   // Create steering file
   const steeringDir = join(projectRoot, '.kiro', 'steering');
   await mkdir(steeringDir, { recursive: true });
-  await writeFile(join(steeringDir, 'vibeguard-guide.md'), STEERING_CONTENT, 'utf-8');
-  output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.kiro/steering/vibeguard-guide.md')}`);
+  await writeFile(join(steeringDir, 'codescout-guide.md'), STEERING_CONTENT, 'utf-8');
+  output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.kiro/steering/codescout-guide.md')}`);
 
   // Write a real MCP server config so the agent gets live tools, not just instructions.
   const mcpResult = await writeMcpConfig(projectRoot, join('.kiro', 'settings', 'mcp.json'));
   output.push(`  ${statusIcon('success')} ${brand.success(mcpResult.action)} ${brand.muted(mcpResult.path)}`);
 
-  // Init vibeguard config if not exists
-  const configPath = join(projectRoot, '.vibeguard', 'config.json');
+  // Init codescout config if not exists
+  const configPath = join(projectRoot, '.codescout', 'config.json');
   let configExists = false;
   try {
     await access(configPath);
@@ -404,18 +404,18 @@ async function installKiro(projectRoot: string): Promise<void> {
     const logger = createLogger({ jsonMode: false, quiet: true, verbose: false, command: 'install' });
     const initCtx = { options: { json: false, cwd: projectRoot, include: [], exclude: [], config: undefined, verbose: false, quiet: true }, config, logger, projectRoot };
     await runInit(initCtx, { force: false });
-    output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.vibeguard/config.json')}`);
+    output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.codescout/config.json')}`);
   } else {
-    output.push(`  ${statusIcon('info')} ${brand.muted('.vibeguard/config.json already exists')}`);
+    output.push(`  ${statusIcon('info')} ${brand.muted('.codescout/config.json already exists')}`);
   }
 
   output.push('');
-  output.push(`  ${brand.primary.bold('Done!')} VibeGuard is now integrated with Kiro.`);
+  output.push(`  ${brand.primary.bold('Done!')} CodeScout is now integrated with Kiro.`);
   output.push('');
   output.push(`  ${brand.secondary('Usage in chat:')}`);
-  output.push(`    Type ${brand.info('/vibeguard scan')} to run a security scan`);
-  output.push(`    Type ${brand.info('/vibeguard health')} for project health`);
-  output.push(`    Type ${brand.info('/vibeguard pack "fix auth"')} for optimized context`);
+  output.push(`    Type ${brand.info('/codescout scan')} to run a security scan`);
+  output.push(`    Type ${brand.info('/codescout health')} for project health`);
+  output.push(`    Type ${brand.info('/codescout pack "fix auth"')} for optimized context`);
   output.push('');
 
   process.stdout.write(output.join('\n') + '\n');
@@ -430,42 +430,42 @@ async function installCursor(projectRoot: string): Promise<void> {
   // (the reported "not working" bug). `globs: **/*` + `alwaysApply: true` makes
   // it a true always-on project rule across every file type.
   const cursorRule = `---
-description: VibeGuard — intelligent, graph-first context selection
+description: CodeScout — intelligent, graph-first context selection
 globs: **/*
 alwaysApply: true
 ---
 
-# VibeGuard Integration
+# CodeScout Integration
 
 When answering questions about this codebase:
-1. Run \`npx vibeguard-cli pack "<user question>" --json\` to get optimized file selection
+1. Run \`npx codescout-cli pack "<user question>" --json\` to get optimized file selection
 2. Read only the files listed in the result (5-15 most relevant files)
 3. Never blindly read the entire project — use the dependency graph
 
 Available commands:
-- \`npx vibeguard-cli --scan\` — Security scan
-- \`npx vibeguard-cli --health\` — Project health score
-- \`npx vibeguard-cli attack\` — Cyberattack vulnerability scan
-- \`npx vibeguard-cli graph\` — Generate interactive HTML graph
-- \`npx vibeguard-cli pack "task"\` — Generate context package (80-95% token reduction)
+- \`npx codescout-cli --scan\` — Security scan
+- \`npx codescout-cli --health\` — Project health score
+- \`npx codescout-cli attack\` — Cyberattack vulnerability scan
+- \`npx codescout-cli graph\` — Generate interactive HTML graph
+- \`npx codescout-cli pack "task"\` — Generate context package (80-95% token reduction)
 
-The dependency graph is at \`.vibeguard/graph.json\`. Use it to understand file relationships before answering architecture questions.
+The dependency graph is at \`.codescout/graph.json\`. Use it to understand file relationships before answering architecture questions.
 `;
 
-  await writeFile(join(rulesDir, 'vibeguard.mdc'), cursorRule, 'utf-8');
+  await writeFile(join(rulesDir, 'codescout.mdc'), cursorRule, 'utf-8');
 
   // Cursor reads MCP servers from .cursor/mcp.json (mcpServers key) — give it
-  // the live VibeGuard tools, matching what the Kiro/VS Code installers do.
+  // the live CodeScout tools, matching what the Kiro/VS Code installers do.
   const mcpResult = await writeMcpConfig(projectRoot, join('.cursor', 'mcp.json'));
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard — Cursor Install'));
+  output.push(header('CodeScout — Cursor Install'));
   output.push('');
-  output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.cursor/rules/vibeguard.mdc')}`);
+  output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.cursor/rules/codescout.mdc')}`);
   output.push(`  ${statusIcon('success')} ${brand.success(mcpResult.action)} ${brand.muted(mcpResult.path)}`);
   output.push('');
-  output.push(`  ${brand.primary.bold('Done!')} VibeGuard is now always-on in Cursor.`);
+  output.push(`  ${brand.primary.bold('Done!')} CodeScout is now always-on in Cursor.`);
   output.push(`  ${brand.muted('Reload Cursor (or restart it) so it picks up the new rule + MCP server.')}`);
   output.push('');
   process.stdout.write(output.join('\n') + '\n');
@@ -473,20 +473,20 @@ The dependency graph is at \`.vibeguard/graph.json\`. Use it to understand file 
 
 async function installClaude(projectRoot: string): Promise<void> {
   const claudeSection = `
-## VibeGuard — Intelligent Context Selection
+## CodeScout — Intelligent Context Selection
 
 When working on this codebase:
-1. Before answering questions, run: \`npx vibeguard-cli pack "<task>" --json\`
+1. Before answering questions, run: \`npx codescout-cli pack "<task>" --json\`
 2. Read ONLY the files listed in the output (5-15 most relevant)
-3. Use \`.vibeguard/graph.json\` to understand file relationships
+3. Use \`.codescout/graph.json\` to understand file relationships
 4. Never read the entire project blindly — the graph tells you what's connected
 
 Available tools:
-- \`npx vibeguard-cli --scan\` — Find secrets & vulnerabilities
-- \`npx vibeguard-cli --health\` — Project quality score (0-100)
-- \`npx vibeguard-cli attack --ai --fix\` — AI-powered security fix
-- \`npx vibeguard-cli graph\` — Generate interactive dependency graph
-- \`npx vibeguard-cli pack "task"\` — Get optimized context (80-95% fewer tokens)
+- \`npx codescout-cli --scan\` — Find secrets & vulnerabilities
+- \`npx codescout-cli --health\` — Project quality score (0-100)
+- \`npx codescout-cli attack --ai --fix\` — AI-powered security fix
+- \`npx codescout-cli graph\` — Generate interactive dependency graph
+- \`npx codescout-cli pack "task"\` — Get optimized context (80-95% fewer tokens)
 `;
 
   const claudePath = join(projectRoot, 'CLAUDE.md');
@@ -497,8 +497,8 @@ Available tools:
     // doesn't exist
   }
 
-  if (existingContent.includes('VibeGuard')) {
-    process.stdout.write(`\n  ${statusIcon('info')} ${brand.muted('CLAUDE.md already contains VibeGuard section.')}\n\n`);
+  if (existingContent.includes('CodeScout')) {
+    process.stdout.write(`\n  ${statusIcon('info')} ${brand.muted('CLAUDE.md already contains CodeScout section.')}\n\n`);
     return;
   }
 
@@ -507,9 +507,9 @@ Available tools:
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard — Claude Code Install'));
+  output.push(header('CodeScout — Claude Code Install'));
   output.push('');
-  output.push(`  ${statusIcon('success')} ${brand.success('Added VibeGuard section to')} ${brand.muted('CLAUDE.md')}`);
+  output.push(`  ${statusIcon('success')} ${brand.success('Added CodeScout section to')} ${brand.muted('CLAUDE.md')}`);
   output.push('');
   output.push(`  ${brand.primary.bold('Done!')} Claude Code will now use the dependency graph automatically.`);
   output.push('');
@@ -520,25 +520,25 @@ async function installCopilot(projectRoot: string): Promise<void> {
   const instructionsDir = join(projectRoot, '.github');
   await mkdir(instructionsDir, { recursive: true });
 
-  const copilotInstructions = `# VibeGuard — GitHub Copilot Integration
+  const copilotInstructions = `# CodeScout — GitHub Copilot Integration
 
-When working on this codebase, use VibeGuard for intelligent context selection and security scanning.
+When working on this codebase, use CodeScout for intelligent context selection and security scanning.
 
 ## Context Selection
 Before answering questions about architecture or making multi-file changes:
-1. Run \`npx vibeguard-cli pack "<task>" --json\` to get the optimal file set
+1. Run \`npx codescout-cli pack "<task>" --json\` to get the optimal file set
 2. Read ONLY the files listed in the output (5-15 most relevant files)
-3. Use \`.vibeguard/graph.json\` to understand file relationships
+3. Use \`.codescout/graph.json\` to understand file relationships
 4. Never read the entire project blindly — the graph tells you what's connected
 
 ## Available Commands
-- \`npx vibeguard-cli --scan\` — Find secrets & security vulnerabilities
-- \`npx vibeguard-cli --health\` — Project quality score (0-100)
-- \`npx vibeguard-cli --dead\` — Detect unused code
-- \`npx vibeguard-cli attack\` — Cyberattack vulnerability scan
-- \`npx vibeguard-cli attack --ai --fix\` — AI-powered security fix
-- \`npx vibeguard-cli graph\` — Generate interactive HTML dependency graph
-- \`npx vibeguard-cli pack "task"\` — Get optimized context (80-95% fewer tokens)
+- \`npx codescout-cli --scan\` — Find secrets & security vulnerabilities
+- \`npx codescout-cli --health\` — Project quality score (0-100)
+- \`npx codescout-cli --dead\` — Detect unused code
+- \`npx codescout-cli attack\` — Cyberattack vulnerability scan
+- \`npx codescout-cli attack --ai --fix\` — AI-powered security fix
+- \`npx codescout-cli graph\` — Generate interactive HTML dependency graph
+- \`npx codescout-cli pack "task"\` — Get optimized context (80-95% fewer tokens)
 
 ## Workflow
 - Before architecture questions: run \`pack\` first
@@ -547,45 +547,45 @@ Before answering questions about architecture or making multi-file changes:
 - Periodically: run \`--health\` to track project quality
 
 ## Key Files
-- \`.vibeguard/graph.json\` — Dependency graph data
-- \`.vibeguard/context-package.md\` — Latest context package
-- \`.vibeguard/config.json\` — VibeGuard configuration
+- \`.codescout/graph.json\` — Dependency graph data
+- \`.codescout/context-package.md\` — Latest context package
+- \`.codescout/config.json\` — CodeScout configuration
 `;
 
   await writeFile(join(instructionsDir, 'copilot-instructions.md'), copilotInstructions, 'utf-8');
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard — GitHub Copilot Install'));
+  output.push(header('CodeScout — GitHub Copilot Install'));
   output.push('');
   output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.github/copilot-instructions.md')}`);
   output.push('');
-  output.push(`  ${brand.primary.bold('Done!')} VibeGuard is now integrated with GitHub Copilot.`);
+  output.push(`  ${brand.primary.bold('Done!')} CodeScout is now integrated with GitHub Copilot.`);
   output.push(`  ${brand.muted('Copilot will use the dependency graph for intelligent context selection.')}`);
   output.push('');
   process.stdout.write(output.join('\n') + '\n');
 }
 
 async function installGemini(projectRoot: string): Promise<void> {
-  const geminiContent = `# VibeGuard — Gemini Integration
+  const geminiContent = `# CodeScout — Gemini Integration
 
-When working on this codebase, use VibeGuard for intelligent context selection and security scanning.
+When working on this codebase, use CodeScout for intelligent context selection and security scanning.
 
 ## Context Selection
 Before answering questions about architecture or making multi-file changes:
-1. Run \`npx vibeguard-cli pack "<task>" --json\` to get the optimal file set
+1. Run \`npx codescout-cli pack "<task>" --json\` to get the optimal file set
 2. Read ONLY the files listed in the output (5-15 most relevant files)
-3. Use \`.vibeguard/graph.json\` to understand file relationships
+3. Use \`.codescout/graph.json\` to understand file relationships
 4. Never read the entire project blindly — the graph tells you what's connected
 
 ## Available Commands
-- \`npx vibeguard-cli --scan\` — Find secrets & security vulnerabilities
-- \`npx vibeguard-cli --health\` — Project quality score (0-100)
-- \`npx vibeguard-cli --dead\` — Detect unused code
-- \`npx vibeguard-cli attack\` — Cyberattack vulnerability scan
-- \`npx vibeguard-cli attack --ai --fix\` — AI-powered security fix
-- \`npx vibeguard-cli graph\` — Generate interactive HTML dependency graph
-- \`npx vibeguard-cli pack "task"\` — Get optimized context (80-95% fewer tokens)
+- \`npx codescout-cli --scan\` — Find secrets & security vulnerabilities
+- \`npx codescout-cli --health\` — Project quality score (0-100)
+- \`npx codescout-cli --dead\` — Detect unused code
+- \`npx codescout-cli attack\` — Cyberattack vulnerability scan
+- \`npx codescout-cli attack --ai --fix\` — AI-powered security fix
+- \`npx codescout-cli graph\` — Generate interactive HTML dependency graph
+- \`npx codescout-cli pack "task"\` — Get optimized context (80-95% fewer tokens)
 
 ## Workflow
 - Before architecture questions: run \`pack\` first
@@ -594,9 +594,9 @@ Before answering questions about architecture or making multi-file changes:
 - Periodically: run \`--health\` to track project quality
 
 ## Key Files
-- \`.vibeguard/graph.json\` — Dependency graph data
-- \`.vibeguard/context-package.md\` — Latest context package
-- \`.vibeguard/config.json\` — VibeGuard configuration
+- \`.codescout/graph.json\` — Dependency graph data
+- \`.codescout/context-package.md\` — Latest context package
+- \`.codescout/config.json\` — CodeScout configuration
 `;
 
   const geminiDir = join(projectRoot, '.gemini');
@@ -613,78 +613,78 @@ Before answering questions about architecture or making multi-file changes:
     // doesn't exist
   }
 
-  existingSettings['vibeguard'] = {
+  existingSettings['codescout'] = {
     enabled: true,
-    contextFile: '.vibeguard/context-package.md',
-    graphFile: '.vibeguard/graph.json',
+    contextFile: '.codescout/context-package.md',
+    graphFile: '.codescout/graph.json',
   };
 
   await writeFile(settingsPath, JSON.stringify(existingSettings, null, 2), 'utf-8');
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard — Gemini Install'));
+  output.push(header('CodeScout — Gemini Install'));
   output.push('');
   output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.gemini/CONTEXT.md')}`);
   output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.gemini/settings.json')}`);
   output.push('');
-  output.push(`  ${brand.primary.bold('Done!')} VibeGuard is now integrated with Gemini.`);
+  output.push(`  ${brand.primary.bold('Done!')} CodeScout is now integrated with Gemini.`);
   output.push(`  ${brand.muted('Gemini will use the dependency graph for intelligent context selection.')}`);
   output.push('');
   process.stdout.write(output.join('\n') + '\n');
 }
 
 async function installAider(projectRoot: string): Promise<void> {
-  const aiderContent = `# VibeGuard — Project Intelligence
+  const aiderContent = `# CodeScout — Project Intelligence
 
-This project uses VibeGuard for static analysis, security scanning, and intelligent context selection.
+This project uses CodeScout for static analysis, security scanning, and intelligent context selection.
 
 ## Quick Reference
 
 ### Get Optimized Context (80-95% fewer tokens)
 \`\`\`bash
-npx vibeguard-cli pack "your task description"
+npx codescout-cli pack "your task description"
 \`\`\`
-Then read \`.vibeguard/context-package.md\` for the focused file set.
+Then read \`.codescout/context-package.md\` for the focused file set.
 
 ### Security Scan
 \`\`\`bash
-npx vibeguard-cli --scan
+npx codescout-cli --scan
 \`\`\`
 
 ### Project Health Score
 \`\`\`bash
-npx vibeguard-cli --health
+npx codescout-cli --health
 \`\`\`
 
 ### Dependency Graph
 \`\`\`bash
-npx vibeguard-cli --graph
+npx codescout-cli --graph
 \`\`\`
 
 ### Dead Code Detection
 \`\`\`bash
-npx vibeguard-cli --dead
+npx codescout-cli --dead
 \`\`\`
 
 ### Cyberattack Scan with AI Fix
 \`\`\`bash
-npx vibeguard-cli attack --ai --fix
+npx codescout-cli attack --ai --fix
 \`\`\`
 
 ## Key Conventions
-- The dependency graph is at \`.vibeguard/graph.json\`
-- Context packages are at \`.vibeguard/context-package.md\`
+- The dependency graph is at \`.codescout/graph.json\`
+- Context packages are at \`.codescout/context-package.md\`
 - Always run \`pack\` before working on multi-file tasks
 - Use the graph to understand which files are connected before making changes
 `;
 
   const aiderConventions = `# .aider.conf.yml conventions
-# VibeGuard integration: use context packages for efficient token usage
+# CodeScout integration: use context packages for efficient token usage
 
 read:
-  - .vibeguard/context-package.md
-  - .vibeguard/graph.json
+  - .codescout/context-package.md
+  - .codescout/graph.json
 `;
 
   await writeFile(join(projectRoot, '.aider.context.md'), aiderContent, 'utf-8');
@@ -705,7 +705,7 @@ read:
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard — Aider Install'));
+  output.push(header('CodeScout — Aider Install'));
   output.push('');
   output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.aider.context.md')}`);
   if (!confExists) {
@@ -714,8 +714,8 @@ read:
     output.push(`  ${statusIcon('info')} ${brand.muted('.aider.conf.yml already exists (preserved)')}`);
   }
   output.push('');
-  output.push(`  ${brand.primary.bold('Done!')} VibeGuard is now integrated with Aider.`);
-  output.push(`  ${brand.muted('Use /read .vibeguard/context-package.md in Aider for optimized context.')}`);
+  output.push(`  ${brand.primary.bold('Done!')} CodeScout is now integrated with Aider.`);
+  output.push(`  ${brand.muted('Use /read .codescout/context-package.md in Aider for optimized context.')}`);
   output.push('');
   process.stdout.write(output.join('\n') + '\n');
 }
@@ -725,26 +725,26 @@ async function installVscode(projectRoot: string): Promise<void> {
   const instructionsDir = join(projectRoot, '.github');
   await mkdir(instructionsDir, { recursive: true });
 
-  const instructions = `# VibeGuard — VS Code Integration
+  const instructions = `# CodeScout — VS Code Integration
 
 VS Code's built-in Copilot Chat reads \`.github/copilot-instructions.md\`. When working
-on this codebase, use VibeGuard for intelligent context selection and security scanning.
+on this codebase, use CodeScout for intelligent context selection and security scanning.
 
 ## Context Selection
-1. Run \`npx vibeguard-cli pack "<task>" --json\` to get the optimal file set
+1. Run \`npx codescout-cli pack "<task>" --json\` to get the optimal file set
 2. Read ONLY the files listed (5-15 most relevant) — never read the whole project
-3. Use \`.vibeguard/graph.json\` to understand file relationships
+3. Use \`.codescout/graph.json\` to understand file relationships
 
 ## Available Commands
-- \`npx vibeguard-cli --scan\` — secrets & security vulnerabilities
-- \`npx vibeguard-cli --health\` — project quality score (0-100)
-- \`npx vibeguard-cli attack\` — cyberattack vulnerability scan
-- \`npx vibeguard-cli audit\` — unified security audit (deps, taint, misconfig, secrets, attacks)
-- \`npx vibeguard-cli graph\` — interactive HTML dependency graph
-- \`npx vibeguard-cli pack "task"\` — optimized context (80-95% fewer tokens)
+- \`npx codescout-cli --scan\` — secrets & security vulnerabilities
+- \`npx codescout-cli --health\` — project quality score (0-100)
+- \`npx codescout-cli attack\` — cyberattack vulnerability scan
+- \`npx codescout-cli audit\` — unified security audit (deps, taint, misconfig, secrets, attacks)
+- \`npx codescout-cli graph\` — interactive HTML dependency graph
+- \`npx codescout-cli pack "task"\` — optimized context (80-95% fewer tokens)
 
 ## Live MCP Tools
-This project also configures a VibeGuard MCP server in \`.vscode/mcp.json\`, exposing
+This project also configures a CodeScout MCP server in \`.vscode/mcp.json\`, exposing
 \`pack_context\`, \`query_graph\`, \`scan_security\`, \`run_audit\`, and more directly to the agent.
 `;
 
@@ -755,12 +755,12 @@ This project also configures a VibeGuard MCP server in \`.vscode/mcp.json\`, exp
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard — VS Code Install'));
+  output.push(header('CodeScout — VS Code Install'));
   output.push('');
   output.push(`  ${statusIcon('success')} ${brand.success('Created')} ${brand.muted('.github/copilot-instructions.md')}`);
   output.push(`  ${statusIcon('success')} ${brand.success(mcpResult.action)} ${brand.muted(mcpResult.path)}`);
   output.push('');
-  output.push(`  ${brand.primary.bold('Done!')} VibeGuard is now integrated with VS Code.`);
+  output.push(`  ${brand.primary.bold('Done!')} CodeScout is now integrated with VS Code.`);
   output.push(`  ${brand.muted('Copilot Chat uses the instructions; the MCP server gives live graph/security tools.')}`);
   output.push('');
   process.stdout.write(output.join('\n') + '\n');
@@ -769,16 +769,16 @@ This project also configures a VibeGuard MCP server in \`.vscode/mcp.json\`, exp
 // ─── Codex / universal AGENTS.md agents ──────────────────────────────────────
 async function installCodex(projectRoot: string): Promise<void> {
   const agentsPath = join(projectRoot, 'AGENTS.md');
-  const section = `## VibeGuard — Intelligent Context & Security
+  const section = `## CodeScout — Intelligent Context & Security
 
-When working on this codebase, use VibeGuard (a local CLI) for context selection and security.
+When working on this codebase, use CodeScout (a local CLI) for context selection and security.
 
-- Before multi-file changes or architecture questions: \`npx vibeguard-cli pack "<task>" --json\`,
+- Before multi-file changes or architecture questions: \`npx codescout-cli pack "<task>" --json\`,
   then read ONLY the 5-15 listed files. Never read the whole project blindly.
-- Security: \`npx vibeguard-cli audit --json\` (deps, taint, misconfig, secrets, attacks → 0-100 score),
-  \`npx vibeguard-cli attack --json\`, \`npx vibeguard-cli --scan\`.
-- Graph Q&A (zero tokens): \`npx vibeguard-cli query "<question>" --json\`, \`explain\`, \`affected\`.
-- Key files: \`.vibeguard/graph.json\`, \`.vibeguard/context-package.md\`.
+- Security: \`npx codescout-cli audit --json\` (deps, taint, misconfig, secrets, attacks → 0-100 score),
+  \`npx codescout-cli attack --json\`, \`npx codescout-cli --scan\`.
+- Graph Q&A (zero tokens): \`npx codescout-cli query "<question>" --json\`, \`explain\`, \`affected\`.
+- Key files: \`.codescout/graph.json\`, \`.codescout/context-package.md\`.
 `;
 
   let existing = '';
@@ -789,11 +789,11 @@ When working on this codebase, use VibeGuard (a local CLI) for context selection
   }
 
   let action: string;
-  if (existing.includes('## VibeGuard')) {
-    action = 'AGENTS.md already contains a VibeGuard section';
+  if (existing.includes('## CodeScout')) {
+    action = 'AGENTS.md already contains a CodeScout section';
   } else if (existing.trim().length > 0) {
     await writeFile(agentsPath, existing.trimEnd() + '\n\n' + section, 'utf-8');
-    action = 'Added VibeGuard section to AGENTS.md';
+    action = 'Added CodeScout section to AGENTS.md';
   } else {
     await writeFile(agentsPath, `# Agent Instructions\n\n${section}`, 'utf-8');
     action = 'Created AGENTS.md';
@@ -801,11 +801,11 @@ When working on this codebase, use VibeGuard (a local CLI) for context selection
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard — Codex / AGENTS.md Install'));
+  output.push(header('CodeScout — Codex / AGENTS.md Install'));
   output.push('');
   output.push(`  ${statusIcon('success')} ${brand.success(action)}`);
   output.push('');
-  output.push(`  ${brand.primary.bold('Done!')} VibeGuard is now described in AGENTS.md.`);
+  output.push(`  ${brand.primary.bold('Done!')} CodeScout is now described in AGENTS.md.`);
   output.push(`  ${brand.muted('Codex, Jules, Amp and other AGENTS.md-aware agents will pick this up.')}`);
   output.push('');
   process.stdout.write(output.join('\n') + '\n');
@@ -816,15 +816,15 @@ async function installAntigravity(projectRoot: string): Promise<void> {
   // Antigravity reads AGENTS.md (project root) for rules — reuse the same
   // create-or-fold section used for Codex, then add a project MCP config.
   const agentsPath = join(projectRoot, 'AGENTS.md');
-  const section = `## VibeGuard — Intelligent Context & Security
+  const section = `## CodeScout — Intelligent Context & Security
 
-When working on this codebase, use VibeGuard (a local CLI) for context selection and security.
+When working on this codebase, use CodeScout (a local CLI) for context selection and security.
 
-- Before multi-file changes or architecture questions: \`npx vibeguard-cli pack "<task>" --json\`,
+- Before multi-file changes or architecture questions: \`npx codescout-cli pack "<task>" --json\`,
   then read ONLY the 5-15 listed files. Never read the whole project blindly.
-- Security: \`npx vibeguard-cli audit --json\` (deps, taint, misconfig, secrets, attacks → 0-100 score),
-  \`npx vibeguard-cli attack --json\`, \`npx vibeguard-cli --scan\`.
-- Graph Q&A (zero tokens): \`npx vibeguard-cli query "<question>" --json\`, \`explain\`, \`affected\`.
+- Security: \`npx codescout-cli audit --json\` (deps, taint, misconfig, secrets, attacks → 0-100 score),
+  \`npx codescout-cli attack --json\`, \`npx codescout-cli --scan\`.
+- Graph Q&A (zero tokens): \`npx codescout-cli query "<question>" --json\`, \`explain\`, \`affected\`.
 - Live MCP tools are configured in \`.antigravity/mcp.json\`.
 `;
 
@@ -836,11 +836,11 @@ When working on this codebase, use VibeGuard (a local CLI) for context selection
   }
 
   let agentsAction: string;
-  if (existing.includes('## VibeGuard')) {
-    agentsAction = 'AGENTS.md already contains a VibeGuard section';
+  if (existing.includes('## CodeScout')) {
+    agentsAction = 'AGENTS.md already contains a CodeScout section';
   } else if (existing.trim().length > 0) {
     await writeFile(agentsPath, existing.trimEnd() + '\n\n' + section, 'utf-8');
-    agentsAction = 'Added VibeGuard section to AGENTS.md';
+    agentsAction = 'Added CodeScout section to AGENTS.md';
   } else {
     await writeFile(agentsPath, `# Agent Instructions\n\n${section}`, 'utf-8');
     agentsAction = 'Created AGENTS.md';
@@ -850,12 +850,12 @@ When working on this codebase, use VibeGuard (a local CLI) for context selection
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard — Antigravity Install'));
+  output.push(header('CodeScout — Antigravity Install'));
   output.push('');
   output.push(`  ${statusIcon('success')} ${brand.success(agentsAction)}`);
   output.push(`  ${statusIcon('success')} ${brand.success(mcpResult.action)} ${brand.muted(mcpResult.path)}`);
   output.push('');
-  output.push(`  ${brand.primary.bold('Done!')} VibeGuard is now integrated with Google Antigravity.`);
+  output.push(`  ${brand.primary.bold('Done!')} CodeScout is now integrated with Google Antigravity.`);
   output.push(`  ${brand.muted('AGENTS.md gives rules; the MCP server gives live graph/security tools.')}`);
   output.push('');
   process.stdout.write(output.join('\n') + '\n');
@@ -939,40 +939,40 @@ async function uninstallKiro(projectRoot: string): Promise<void> {
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard Uninstall — Kiro'));
+  output.push(header('CodeScout Uninstall — Kiro'));
   output.push('');
 
   try {
-    await rm(join(projectRoot, '.kiro', 'skills', 'vibeguard'), { recursive: true });
-    output.push(`  ${statusIcon('success')} ${brand.success('Removed')} ${brand.muted('.kiro/skills/vibeguard/')}`);
+    await rm(join(projectRoot, '.kiro', 'skills', 'codescout'), { recursive: true });
+    output.push(`  ${statusIcon('success')} ${brand.success('Removed')} ${brand.muted('.kiro/skills/codescout/')}`);
   } catch {
     output.push(`  ${statusIcon('info')} ${brand.muted('Skill not found (already removed)')}`);
   }
 
   try {
-    await rm(join(projectRoot, '.kiro', 'steering', 'vibeguard-guide.md'));
-    output.push(`  ${statusIcon('success')} ${brand.success('Removed')} ${brand.muted('.kiro/steering/vibeguard-guide.md')}`);
+    await rm(join(projectRoot, '.kiro', 'steering', 'codescout-guide.md'));
+    output.push(`  ${statusIcon('success')} ${brand.success('Removed')} ${brand.muted('.kiro/steering/codescout-guide.md')}`);
   } catch {
     output.push(`  ${statusIcon('info')} ${brand.muted('Steering file not found (already removed)')}`);
   }
 
-  // Legacy: earlier versions wrote the steering file as vibeguard.md.
+  // Legacy: earlier versions wrote the steering file as codescout.md.
   try {
-    await rm(join(projectRoot, '.kiro', 'steering', 'vibeguard.md'));
-    output.push(`  ${statusIcon('success')} ${brand.success('Removed')} ${brand.muted('.kiro/steering/vibeguard.md (legacy)')}`);
+    await rm(join(projectRoot, '.kiro', 'steering', 'codescout.md'));
+    output.push(`  ${statusIcon('success')} ${brand.success('Removed')} ${brand.muted('.kiro/steering/codescout.md (legacy)')}`);
   } catch {
     // No legacy file — fine.
   }
 
   const mcpResult = await removeMcpConfig(projectRoot, join('.kiro', 'settings', 'mcp.json'));
   if (mcpResult.removed) {
-    output.push(`  ${statusIcon('success')} ${brand.success('Removed vibeguard server from')} ${brand.muted(mcpResult.path)}`);
+    output.push(`  ${statusIcon('success')} ${brand.success('Removed codescout server from')} ${brand.muted(mcpResult.path)}`);
   } else {
-    output.push(`  ${statusIcon('info')} ${brand.muted('No vibeguard MCP entry found (already removed)')}`);
+    output.push(`  ${statusIcon('info')} ${brand.muted('No codescout MCP entry found (already removed)')}`);
   }
 
   output.push('');
-  output.push(`  ${brand.muted('VibeGuard uninstalled from Kiro. .vibeguard/ data preserved.')}`);
+  output.push(`  ${brand.muted('CodeScout uninstalled from Kiro. .codescout/ data preserved.')}`);
   output.push('');
   process.stdout.write(output.join('\n') + '\n');
 }
@@ -982,25 +982,25 @@ async function uninstallCursor(projectRoot: string): Promise<void> {
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard Uninstall — Cursor'));
+  output.push(header('CodeScout Uninstall — Cursor'));
   output.push('');
 
   try {
-    await rm(join(projectRoot, '.cursor', 'rules', 'vibeguard.mdc'));
-    output.push(`  ${statusIcon('success')} ${brand.success('Removed')} ${brand.muted('.cursor/rules/vibeguard.mdc')}`);
+    await rm(join(projectRoot, '.cursor', 'rules', 'codescout.mdc'));
+    output.push(`  ${statusIcon('success')} ${brand.success('Removed')} ${brand.muted('.cursor/rules/codescout.mdc')}`);
   } catch {
     output.push(`  ${statusIcon('info')} ${brand.muted('Cursor rule not found (already removed)')}`);
   }
 
   const mcpResult = await removeMcpConfig(projectRoot, join('.cursor', 'mcp.json'));
   if (mcpResult.removed) {
-    output.push(`  ${statusIcon('success')} ${brand.success('Removed vibeguard server from')} ${brand.muted(mcpResult.path)}`);
+    output.push(`  ${statusIcon('success')} ${brand.success('Removed codescout server from')} ${brand.muted(mcpResult.path)}`);
   } else {
-    output.push(`  ${statusIcon('info')} ${brand.muted('No vibeguard MCP entry found (already removed)')}`);
+    output.push(`  ${statusIcon('info')} ${brand.muted('No codescout MCP entry found (already removed)')}`);
   }
 
   output.push('');
-  output.push(`  ${brand.muted('VibeGuard uninstalled from Cursor. .vibeguard/ data preserved.')}`);
+  output.push(`  ${brand.muted('CodeScout uninstalled from Cursor. .codescout/ data preserved.')}`);
   output.push('');
   process.stdout.write(output.join('\n') + '\n');
 }
@@ -1015,13 +1015,13 @@ async function uninstallClaude(projectRoot: string): Promise<void> {
     return;
   }
 
-  const sectionStart = content.indexOf('## VibeGuard');
+  const sectionStart = content.indexOf('## CodeScout');
   if (sectionStart === -1) {
-    process.stdout.write(`\n  ${statusIcon('info')} ${brand.muted('No VibeGuard section found in CLAUDE.md')}\n\n`);
+    process.stdout.write(`\n  ${statusIcon('info')} ${brand.muted('No CodeScout section found in CLAUDE.md')}\n\n`);
     return;
   }
 
-  // Remove everything from the VibeGuard section header to the next ## or end of file
+  // Remove everything from the CodeScout section header to the next ## or end of file
   const afterSection = content.slice(sectionStart + 1);
   const nextHeading = afterSection.indexOf('\n## ');
   const cleaned = nextHeading === -1
@@ -1032,11 +1032,11 @@ async function uninstallClaude(projectRoot: string): Promise<void> {
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard Uninstall — Claude Code'));
+  output.push(header('CodeScout Uninstall — Claude Code'));
   output.push('');
-  output.push(`  ${statusIcon('success')} ${brand.success('Removed VibeGuard section from')} ${brand.muted('CLAUDE.md')}`);
+  output.push(`  ${statusIcon('success')} ${brand.success('Removed CodeScout section from')} ${brand.muted('CLAUDE.md')}`);
   output.push('');
-  output.push(`  ${brand.muted('VibeGuard uninstalled from Claude Code. .vibeguard/ data preserved.')}`);
+  output.push(`  ${brand.muted('CodeScout uninstalled from Claude Code. .codescout/ data preserved.')}`);
   output.push('');
   process.stdout.write(output.join('\n') + '\n');
 }
@@ -1046,7 +1046,7 @@ async function uninstallCopilot(projectRoot: string): Promise<void> {
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard Uninstall — GitHub Copilot'));
+  output.push(header('CodeScout Uninstall — GitHub Copilot'));
   output.push('');
 
   try {
@@ -1057,7 +1057,7 @@ async function uninstallCopilot(projectRoot: string): Promise<void> {
   }
 
   output.push('');
-  output.push(`  ${brand.muted('VibeGuard uninstalled from GitHub Copilot. .vibeguard/ data preserved.')}`);
+  output.push(`  ${brand.muted('CodeScout uninstalled from GitHub Copilot. .codescout/ data preserved.')}`);
   output.push('');
   process.stdout.write(output.join('\n') + '\n');
 }
@@ -1067,7 +1067,7 @@ async function uninstallGemini(projectRoot: string): Promise<void> {
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard Uninstall — Gemini'));
+  output.push(header('CodeScout Uninstall — Gemini'));
   output.push('');
 
   try {
@@ -1077,22 +1077,22 @@ async function uninstallGemini(projectRoot: string): Promise<void> {
     output.push(`  ${statusIcon('info')} ${brand.muted('Gemini context not found (already removed)')}`);
   }
 
-  // Remove vibeguard key from settings.json if it exists
+  // Remove codescout key from settings.json if it exists
   const settingsPath = join(projectRoot, '.gemini', 'settings.json');
   try {
     const raw = await readFile(settingsPath, 'utf-8');
     const settings = JSON.parse(raw);
-    if (settings['vibeguard']) {
-      delete settings['vibeguard'];
+    if (settings['codescout']) {
+      delete settings['codescout'];
       await writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
-      output.push(`  ${statusIcon('success')} ${brand.success('Removed vibeguard key from')} ${brand.muted('.gemini/settings.json')}`);
+      output.push(`  ${statusIcon('success')} ${brand.success('Removed codescout key from')} ${brand.muted('.gemini/settings.json')}`);
     }
   } catch {
     // settings.json doesn't exist or can't be parsed
   }
 
   output.push('');
-  output.push(`  ${brand.muted('VibeGuard uninstalled from Gemini. .vibeguard/ data preserved.')}`);
+  output.push(`  ${brand.muted('CodeScout uninstalled from Gemini. .codescout/ data preserved.')}`);
   output.push('');
   process.stdout.write(output.join('\n') + '\n');
 }
@@ -1102,7 +1102,7 @@ async function uninstallAider(projectRoot: string): Promise<void> {
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard Uninstall — Aider'));
+  output.push(header('CodeScout Uninstall — Aider'));
   output.push('');
 
   try {
@@ -1113,7 +1113,7 @@ async function uninstallAider(projectRoot: string): Promise<void> {
   }
 
   output.push('');
-  output.push(`  ${brand.muted('VibeGuard uninstalled from Aider. .vibeguard/ data preserved.')}`);
+  output.push(`  ${brand.muted('CodeScout uninstalled from Aider. .codescout/ data preserved.')}`);
   output.push(`  ${brand.muted('Note: .aider.conf.yml was preserved (may contain user config).')}`);
   output.push('');
   process.stdout.write(output.join('\n') + '\n');
@@ -1124,7 +1124,7 @@ async function uninstallVscode(projectRoot: string): Promise<void> {
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard Uninstall — VS Code'));
+  output.push(header('CodeScout Uninstall — VS Code'));
   output.push('');
 
   try {
@@ -1136,13 +1136,13 @@ async function uninstallVscode(projectRoot: string): Promise<void> {
 
   const mcpResult = await removeMcpConfig(projectRoot, join('.vscode', 'mcp.json'), 'servers');
   if (mcpResult.removed) {
-    output.push(`  ${statusIcon('success')} ${brand.success('Removed vibeguard server from')} ${brand.muted(mcpResult.path)}`);
+    output.push(`  ${statusIcon('success')} ${brand.success('Removed codescout server from')} ${brand.muted(mcpResult.path)}`);
   } else {
-    output.push(`  ${statusIcon('info')} ${brand.muted('No vibeguard MCP entry found (already removed)')}`);
+    output.push(`  ${statusIcon('info')} ${brand.muted('No codescout MCP entry found (already removed)')}`);
   }
 
   output.push('');
-  output.push(`  ${brand.muted('VibeGuard uninstalled from VS Code. .vibeguard/ data preserved.')}`);
+  output.push(`  ${brand.muted('CodeScout uninstalled from VS Code. .codescout/ data preserved.')}`);
   output.push('');
   process.stdout.write(output.join('\n') + '\n');
 }
@@ -1152,7 +1152,7 @@ async function uninstallCodex(projectRoot: string): Promise<void> {
 
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard Uninstall — Codex / AGENTS.md'));
+  output.push(header('CodeScout Uninstall — Codex / AGENTS.md'));
   output.push('');
 
   let content = '';
@@ -1165,9 +1165,9 @@ async function uninstallCodex(projectRoot: string): Promise<void> {
     return;
   }
 
-  const sectionStart = content.indexOf('## VibeGuard');
+  const sectionStart = content.indexOf('## CodeScout');
   if (sectionStart === -1) {
-    output.push(`  ${statusIcon('info')} ${brand.muted('No VibeGuard section found in AGENTS.md')}`);
+    output.push(`  ${statusIcon('info')} ${brand.muted('No CodeScout section found in AGENTS.md')}`);
   } else {
     const afterSection = content.slice(sectionStart + 1);
     const nextHeading = afterSection.indexOf('\n## ');
@@ -1175,11 +1175,11 @@ async function uninstallCodex(projectRoot: string): Promise<void> {
       ? content.slice(0, sectionStart).trimEnd() + '\n'
       : content.slice(0, sectionStart) + afterSection.slice(nextHeading + 1);
     await writeFile(agentsPath, cleaned, 'utf-8');
-    output.push(`  ${statusIcon('success')} ${brand.success('Removed VibeGuard section from')} ${brand.muted('AGENTS.md')}`);
+    output.push(`  ${statusIcon('success')} ${brand.success('Removed CodeScout section from')} ${brand.muted('AGENTS.md')}`);
   }
 
   output.push('');
-  output.push(`  ${brand.muted('VibeGuard uninstalled from Codex/AGENTS.md. .vibeguard/ data preserved.')}`);
+  output.push(`  ${brand.muted('CodeScout uninstalled from Codex/AGENTS.md. .codescout/ data preserved.')}`);
   output.push('');
   process.stdout.write(output.join('\n') + '\n');
 }
@@ -1187,16 +1187,16 @@ async function uninstallCodex(projectRoot: string): Promise<void> {
 async function uninstallAntigravity(projectRoot: string): Promise<void> {
   const output: string[] = [];
   output.push('');
-  output.push(header('VibeGuard Uninstall — Antigravity'));
+  output.push(header('CodeScout Uninstall — Antigravity'));
   output.push('');
 
   // Strip our section from AGENTS.md (remove the file if it held only that).
   const agentsPath = join(projectRoot, 'AGENTS.md');
   try {
     const content = await readFile(agentsPath, 'utf-8');
-    const sectionStart = content.indexOf('## VibeGuard');
+    const sectionStart = content.indexOf('## CodeScout');
     if (sectionStart === -1) {
-      output.push(`  ${statusIcon('info')} ${brand.muted('No VibeGuard section found in AGENTS.md')}`);
+      output.push(`  ${statusIcon('info')} ${brand.muted('No CodeScout section found in AGENTS.md')}`);
     } else {
       const afterSection = content.slice(sectionStart + 1);
       const nextHeading = afterSection.indexOf('\n## ');
@@ -1204,7 +1204,7 @@ async function uninstallAntigravity(projectRoot: string): Promise<void> {
         ? content.slice(0, sectionStart).trimEnd() + '\n'
         : content.slice(0, sectionStart) + afterSection.slice(nextHeading + 1);
       await writeFile(agentsPath, cleaned, 'utf-8');
-      output.push(`  ${statusIcon('success')} ${brand.success('Removed VibeGuard section from')} ${brand.muted('AGENTS.md')}`);
+      output.push(`  ${statusIcon('success')} ${brand.success('Removed CodeScout section from')} ${brand.muted('AGENTS.md')}`);
     }
   } catch {
     output.push(`  ${statusIcon('info')} ${brand.muted('AGENTS.md not found (nothing to remove)')}`);
@@ -1212,13 +1212,13 @@ async function uninstallAntigravity(projectRoot: string): Promise<void> {
 
   const mcpResult = await removeMcpConfig(projectRoot, join('.antigravity', 'mcp.json'));
   if (mcpResult.removed) {
-    output.push(`  ${statusIcon('success')} ${brand.success('Removed vibeguard server from')} ${brand.muted(mcpResult.path)}`);
+    output.push(`  ${statusIcon('success')} ${brand.success('Removed codescout server from')} ${brand.muted(mcpResult.path)}`);
   } else {
-    output.push(`  ${statusIcon('info')} ${brand.muted('No vibeguard MCP entry found (already removed)')}`);
+    output.push(`  ${statusIcon('info')} ${brand.muted('No codescout MCP entry found (already removed)')}`);
   }
 
   output.push('');
-  output.push(`  ${brand.muted('VibeGuard uninstalled from Antigravity. .vibeguard/ data preserved.')}`);
+  output.push(`  ${brand.muted('CodeScout uninstalled from Antigravity. .codescout/ data preserved.')}`);
   output.push('');
   process.stdout.write(output.join('\n') + '\n');
 }

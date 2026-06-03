@@ -1,5 +1,5 @@
 import type { CommandContext } from '../context.js';
-import { VibeguardError, ErrorCodes } from '../utils/errors.js';
+import { CodeScoutError, ErrorCodes } from '../utils/errors.js';
 import { emitJson } from '../utils/json-output.js';
 import { header, keyValue, divider, summaryLine, statusIcon, filePath, brand, box } from '../utils/ui.js';
 
@@ -12,7 +12,7 @@ export interface ReviewCommandOptions {
 /**
  * Risk-scored review of the current change set.
  *
- * Combines graph blast-radius analysis with VibeGuard's security scan: every
+ * Combines graph blast-radius analysis with CodeScout's security scan: every
  * changed file is scored by impact × importance × test-gaps, and any security
  * findings on changed files are folded into the same report. `--brief` prints a
  * compact Token Savings panel comparing graph context to a full-context read.
@@ -28,12 +28,12 @@ export async function runReview(ctx: CommandContext, opts: ReviewCommandOptions)
 
   const git = createGitUtils();
   if (!(await git.isGitRepo(projectRoot))) {
-    throw new VibeguardError(ErrorCodes.GIT_UNAVAILABLE, 'Not a git repository. `vibeguard review` needs git to find changes.');
+    throw new CodeScoutError(ErrorCodes.GIT_UNAVAILABLE, 'Not a git repository. `codescout review` needs git to find changes.');
   }
 
   const graph = await loadGraph(projectRoot);
   if (!graph) {
-    throw new VibeguardError(ErrorCodes.CONFIG_NOT_FOUND, 'No graph found. Run `vibeguard map` first.');
+    throw new CodeScoutError(ErrorCodes.CONFIG_NOT_FOUND, 'No graph found. Run `codescout map` first.');
   }
 
   if (!options.json) logger.startSpinner(`Reviewing changes since ${base}...`);
@@ -125,7 +125,7 @@ function renderFull(result: import('../engines/change-detector.js').ChangeReview
   }
 
   if (result.unknownFiles.length > 0) {
-    output.push(`  ${brand.muted(`${result.unknownFiles.length} changed file(s) not in graph (new/excluded) — run \`vibeguard map\` to include them.`)}`);
+    output.push(`  ${brand.muted(`${result.unknownFiles.length} changed file(s) not in graph (new/excluded) — run \`codescout map\` to include them.`)}`);
     output.push('');
   }
 

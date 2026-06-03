@@ -4,7 +4,7 @@ import { resolveFiles } from '../utils/glob-resolver.js';
 import { CredentialsStore, type LLMCredentials } from '../storage/credentials-store.js';
 import { emitJson } from '../utils/json-output.js';
 import { header, severityBadge, filePath, divider, summaryLine, statusIcon, brand } from '../utils/ui.js';
-import { VibeguardError, ErrorCodes } from '../utils/errors.js';
+import { CodeScoutError, ErrorCodes } from '../utils/errors.js';
 import type { AIAdvisorResult } from '../engines/ai-security-advisor.js';
 import type { FileFixPlan } from '../engines/ai-fixer.js';
 import type { CommandContext } from '../context.js';
@@ -146,7 +146,7 @@ async function applyTerminalFixes(
       const relBackup = backupDir.replace(projectRoot, '').replace(/^[/\\]/, '');
       process.stdout.write(`\n  ${statusIcon('success')} ${brand.success.bold(`Applied AI fixes to ${applied} file(s)!`)}\n`);
       process.stdout.write(`  ${brand.muted('Originals backed up to:')} ${brand.secondary(relBackup)}\n`);
-      process.stdout.write(`  ${brand.muted('Re-run')} ${brand.secondary('vibeguard attack')} ${brand.muted('to verify.')}\n\n`);
+      process.stdout.write(`  ${brand.muted('Re-run')} ${brand.secondary('codescout attack')} ${brand.muted('to verify.')}\n\n`);
     }
   } catch (err) {
     logger.stopSpinner(false);
@@ -159,9 +159,9 @@ async function applyTerminalFixes(
 async function resolveCredentials(projectRoot: string): Promise<LLMCredentials> {
   const credentials = await new CredentialsStore(projectRoot).resolve();
   if (!credentials) {
-    throw new VibeguardError(
+    throw new CodeScoutError(
       ErrorCodes.CONFIG_NOT_FOUND,
-      'No LLM API key configured. Run `vibeguard config set-key <key>` first, or set VIBEGUARD_API_KEY.',
+      'No LLM API key configured. Run `codescout config set-key <key>` first, or set CODESCOUT_API_KEY.',
     );
   }
   return credentials;
@@ -248,8 +248,8 @@ function printLocalFindings(attackResult: AttackScanResult, opts: AttackCommandO
     output.push(divider());
     output.push('');
     output.push(`  ${brand.info('💡 For a stronger AI-powered scan + auto-fix:')}`);
-    output.push(`     ${brand.secondary('vibeguard config set-key <api-key>')}  ${brand.muted('Configure an LLM provider')}`);
-    output.push(`     ${brand.secondary('vibeguard attack --ai --fix')}          ${brand.muted('Deep scan and fix')}`);
+    output.push(`     ${brand.secondary('codescout config set-key <api-key>')}  ${brand.muted('Configure an LLM provider')}`);
+    output.push(`     ${brand.secondary('codescout attack --ai --fix')}          ${brand.muted('Deep scan and fix')}`);
     output.push('');
   }
 

@@ -41,7 +41,7 @@ async function exists(p: string): Promise<boolean> {
 }
 
 beforeEach(async () => {
-  testDir = join(tmpdir(), `vibeguard-caveman-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  testDir = join(tmpdir(), `codescout-caveman-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   await mkdir(testDir, { recursive: true });
 });
 
@@ -99,8 +99,8 @@ describe('caveman engine', () => {
   });
 
   it('coerces an unknown persisted level back to the default', async () => {
-    await mkdir(join(testDir, '.vibeguard'), { recursive: true });
-    await writeFile(join(testDir, '.vibeguard', 'caveman.json'), JSON.stringify({ enabled: true, level: 'bogus' }), 'utf-8');
+    await mkdir(join(testDir, '.codescout'), { recursive: true });
+    await writeFile(join(testDir, '.codescout', 'caveman.json'), JSON.stringify({ enabled: true, level: 'bogus' }), 'utf-8');
     const loaded = await loadCavemanState(testDir);
     expect(loaded.level).toBe('full');
   });
@@ -111,7 +111,7 @@ describe('caveman command', () => {
     const ctx = await makeCtx();
     await runCaveman(ctx, { action: 'on', level: 'full' });
 
-    const steeringPath = join(testDir, '.kiro', 'steering', 'vibeguard-caveman.md');
+    const steeringPath = join(testDir, '.kiro', 'steering', 'codescout-caveman.md');
     expect(await exists(steeringPath)).toBe(true);
     const content = await readFile(steeringPath, 'utf-8');
     expect(content).toContain('inclusion: always');
@@ -127,7 +127,7 @@ describe('caveman command', () => {
     await runCaveman(ctx, { action: 'on', level: 'lite' });
     await runCaveman(ctx, { action: 'off' });
 
-    const steeringPath = join(testDir, '.kiro', 'steering', 'vibeguard-caveman.md');
+    const steeringPath = join(testDir, '.kiro', 'steering', 'codescout-caveman.md');
     expect(await exists(steeringPath)).toBe(false);
 
     const state = await loadCavemanState(testDir);
@@ -143,7 +143,7 @@ describe('caveman command', () => {
     expect(state.enabled).toBe(true);
     expect(state.level).toBe('ultra');
 
-    const content = await readFile(join(testDir, '.kiro', 'steering', 'vibeguard-caveman.md'), 'utf-8');
+    const content = await readFile(join(testDir, '.kiro', 'steering', 'codescout-caveman.md'), 'utf-8');
     expect(content).toContain('level: ultra');
   });
 
@@ -164,29 +164,29 @@ describe('caveman command', () => {
     await runCaveman(ctx, { action: 'on', level: 'full' });
     let claude = await readFile(join(testDir, 'CLAUDE.md'), 'utf-8');
     expect(claude).toContain('Existing notes.');
-    expect(claude).toContain('vibeguard-caveman:begin');
+    expect(claude).toContain('codescout-caveman:begin');
     expect(claude).toContain('Caveman Mode');
 
     await runCaveman(ctx, { action: 'off' });
     claude = await readFile(join(testDir, 'CLAUDE.md'), 'utf-8');
     expect(claude).toContain('Existing notes.');
-    expect(claude).not.toContain('vibeguard-caveman:begin');
+    expect(claude).not.toContain('codescout-caveman:begin');
   });
 
   it('creates the canonical agent rule files so Caveman works in every IDE', async () => {
     const ctx = await makeCtx();
     await runCaveman(ctx, { action: 'on', level: 'full' });
     // Per-IDE rule files are always created (no prior install needed).
-    expect(await exists(join(testDir, '.kiro', 'steering', 'vibeguard-caveman.md'))).toBe(true);
-    expect(await exists(join(testDir, '.cursor', 'rules', 'vibeguard-caveman.mdc'))).toBe(true);
-    expect(await exists(join(testDir, '.windsurf', 'rules', 'vibeguard-caveman.md'))).toBe(true);
+    expect(await exists(join(testDir, '.kiro', 'steering', 'codescout-caveman.md'))).toBe(true);
+    expect(await exists(join(testDir, '.cursor', 'rules', 'codescout-caveman.mdc'))).toBe(true);
+    expect(await exists(join(testDir, '.windsurf', 'rules', 'codescout-caveman.md'))).toBe(true);
     // Cross-tool memory files are created too.
     expect(await exists(join(testDir, 'CLAUDE.md'))).toBe(true);
     expect(await exists(join(testDir, 'AGENTS.md'))).toBe(true);
 
-    // Turning it off removes the files VibeGuard created.
+    // Turning it off removes the files CodeScout created.
     await runCaveman(ctx, { action: 'off' });
-    expect(await exists(join(testDir, '.kiro', 'steering', 'vibeguard-caveman.md'))).toBe(false);
+    expect(await exists(join(testDir, '.kiro', 'steering', 'codescout-caveman.md'))).toBe(false);
     expect(await exists(join(testDir, 'CLAUDE.md'))).toBe(false);
     expect(await exists(join(testDir, 'AGENTS.md'))).toBe(false);
   });
@@ -269,9 +269,9 @@ describe('caveman engine enable/disable helpers', () => {
     const res = await enableCaveman(testDir, 'ultra');
     expect(res.state.enabled).toBe(true);
     expect(res.state.level).toBe('ultra');
-    expect(res.written).toContain('.kiro/steering/vibeguard-caveman.md');
+    expect(res.written).toContain('.kiro/steering/codescout-caveman.md');
 
-    const steering = await readFile(join(testDir, '.kiro', 'steering', 'vibeguard-caveman.md'), 'utf-8');
+    const steering = await readFile(join(testDir, '.kiro', 'steering', 'codescout-caveman.md'), 'utf-8');
     expect(steering).toContain('inclusion: always');
     expect(steering).toContain('level: ultra');
   });
@@ -280,15 +280,15 @@ describe('caveman engine enable/disable helpers', () => {
     await enableCaveman(testDir, 'full');
     const res = await disableCaveman(testDir);
     expect(res.state.enabled).toBe(false);
-    expect(res.removed).toContain('.kiro/steering/vibeguard-caveman.md');
-    expect(await exists(join(testDir, '.kiro', 'steering', 'vibeguard-caveman.md'))).toBe(false);
+    expect(res.removed).toContain('.kiro/steering/codescout-caveman.md');
+    expect(await exists(join(testDir, '.kiro', 'steering', 'codescout-caveman.md'))).toBe(false);
   });
 
   it('enable mirrors into an existing Cursor rules dir', async () => {
     await mkdir(join(testDir, '.cursor', 'rules'), { recursive: true });
     const res = await enableCaveman(testDir, 'full');
-    expect(res.written).toContain('.cursor/rules/vibeguard-caveman.mdc');
-    const rule = await readFile(join(testDir, '.cursor', 'rules', 'vibeguard-caveman.mdc'), 'utf-8');
+    expect(res.written).toContain('.cursor/rules/codescout-caveman.mdc');
+    const rule = await readFile(join(testDir, '.cursor', 'rules', 'codescout-caveman.mdc'), 'utf-8');
     expect(rule).toContain('alwaysApply: true');
   });
 });

@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { VibeguardError, ErrorCodes, getExitCode, formatErrorJson, formatErrorTerminal } from '../../src/utils/errors.js';
+import { CodeScoutError, ErrorCodes, getExitCode, formatErrorJson, formatErrorTerminal } from '../../src/utils/errors.js';
 
 describe('Error Handling', () => {
-  it('VibeguardError has correct properties', () => {
-    const err = new VibeguardError(ErrorCodes.CONFIG_INVALID, 'bad config', { key: 'ignore' });
+  it('CodeScoutError has correct properties', () => {
+    const err = new CodeScoutError(ErrorCodes.CONFIG_INVALID, 'bad config', { key: 'ignore' });
     expect(err.code).toBe('CONFIG_INVALID');
     expect(err.message).toBe('bad config');
     expect(err.details).toEqual({ key: 'ignore' });
-    expect(err.name).toBe('VibeguardError');
+    expect(err.name).toBe('CodeScoutError');
   });
 
   it('getExitCode returns 2 for usage errors', () => {
@@ -26,7 +26,7 @@ describe('Error Handling', () => {
   });
 
   it('formatErrorJson produces correct structure', () => {
-    const err = new VibeguardError(ErrorCodes.CONFIG_INVALID, 'test error', { key: 'x' });
+    const err = new CodeScoutError(ErrorCodes.CONFIG_INVALID, 'test error', { key: 'x' });
     const json = formatErrorJson(err);
 
     expect(json.schemaVersion).toBe('1.0.0');
@@ -36,7 +36,7 @@ describe('Error Handling', () => {
   });
 
   it('formatErrorTerminal produces readable string', () => {
-    const err = new VibeguardError(ErrorCodes.ALREADY_EXISTS, 'file exists');
+    const err = new CodeScoutError(ErrorCodes.ALREADY_EXISTS, 'file exists');
     const msg = formatErrorTerminal(err);
 
     expect(msg).toContain('ALREADY_EXISTS');

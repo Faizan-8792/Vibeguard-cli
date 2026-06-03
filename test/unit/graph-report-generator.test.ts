@@ -13,8 +13,8 @@ describe('Graph Report Generator', () => {
   let testDir: string;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `vibeguard-report-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-    await mkdir(join(testDir, '.vibeguard'), { recursive: true });
+    testDir = join(tmpdir(), `codescout-report-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    await mkdir(join(testDir, '.codescout'), { recursive: true });
   });
 
   afterEach(async () => {
@@ -75,9 +75,9 @@ describe('Graph Report Generator', () => {
     };
 
     await generateGraphReport(testDir, graph);
-    const md = await readFile(join(testDir, '.vibeguard', 'GRAPH_REPORT.md'), 'utf-8');
+    const md = await readFile(join(testDir, '.codescout', 'GRAPH_REPORT.md'), 'utf-8');
 
-    expect(md).toContain('# VibeGuard');
+    expect(md).toContain('# CodeScout');
     expect(md).toContain('God Nodes');
     expect(md).toContain('Communities');
     expect(md).toContain('Suggested Questions');

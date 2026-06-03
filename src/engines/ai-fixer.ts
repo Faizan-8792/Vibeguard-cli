@@ -29,7 +29,7 @@ const MAX_FILE_SIZE_CHARS = 24000;
 /** Only these extensions are auto-fixable; .env/.gitignore are handled by `security --fix`. */
 const SOURCE_FILE_PATTERN = /\.(ts|tsx|js|jsx|mjs|cjs)$/;
 
-const FIX_SYSTEM_PROMPT = `You are VibeGuard's senior security engineer performing automated remediation.
+const FIX_SYSTEM_PROMPT = `You are CodeScout's senior security engineer performing automated remediation.
 
 You receive ONE source file and a list of confirmed vulnerabilities found in it. Rewrite the file to fix EVERY listed vulnerability while preserving all existing functionality and code style.
 
@@ -169,14 +169,14 @@ async function planFileFix(
 }
 
 /**
- * Apply fix plans to disk. Backs up originals to .vibeguard-trash/ai-fix-<timestamp>/ first.
+ * Apply fix plans to disk. Backs up originals to .codescout-trash/ai-fix-<timestamp>/ first.
  */
 export async function applyFixes(
   projectRoot: string,
   plans: FileFixPlan[],
 ): Promise<{ applied: number; backupDir: string }> {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const backupDir = join(projectRoot, '.vibeguard-trash', `ai-fix-${timestamp}`);
+  const backupDir = join(projectRoot, '.codescout-trash', `ai-fix-${timestamp}`);
 
   let applied = 0;
   for (const plan of plans) {

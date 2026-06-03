@@ -32,8 +32,8 @@ export async function computeTags(
       const identTags = deriveIdentifierTags(content);
       for (const t of identTags) fileTags.add(t);
 
-      // Parse @vibeguard: comments
-      const commentTags = parseVibeguardComments(content);
+      // Parse @codescout: comments
+      const commentTags = parseCodeScoutComments(content);
       for (const t of commentTags) fileTags.add(t);
     } catch {
       // File unreadable, skip identifier tags
@@ -215,9 +215,9 @@ function deriveFrameworkTags(filePath: string): string[] {
   return tags;
 }
 
-function parseVibeguardComments(content: string): string[] {
+function parseCodeScoutComments(content: string): string[] {
   const tags: string[] = [];
-  const regex = /\/\/\s*@vibeguard:\s*(.+)/g;
+  const regex = /\/\/\s*@codescout:\s*(.+)/g;
 
   let match;
   while ((match = regex.exec(content)) !== null) {

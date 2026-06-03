@@ -14,7 +14,7 @@ import type { CommandContext } from '../context.js';
 export interface AuditCommandOptions {
   /** Minimum severity to report (filters output). */
   minSeverity?: string;
-  /** Write a CycloneDX SBOM to .vibeguard/sbom.json. */
+  /** Write a CycloneDX SBOM to .codescout/sbom.json. */
   sbom: boolean;
 }
 
@@ -48,9 +48,9 @@ export async function runAudit(ctx: CommandContext, opts: AuditCommandOptions): 
   let sbomWritten: string | null = null;
   if (opts.sbom) {
     const sbom = buildSbom(deps);
-    const sbomPath = join(projectRoot, '.vibeguard', 'sbom.json');
+    const sbomPath = join(projectRoot, '.codescout', 'sbom.json');
     await writeFile(sbomPath, JSON.stringify(sbom, null, 2) + '\n', 'utf-8');
-    sbomWritten = '.vibeguard/sbom.json';
+    sbomWritten = '.codescout/sbom.json';
   }
 
   if (options.json) {
@@ -141,7 +141,7 @@ function renderAuditTerminal(opts: AuditCommandOptions, data: RenderData): void 
 
   out.push(`  ${brand.primary.bold('🔒 Secrets & Attacks')}`);
   out.push(`    ${brand.muted('Secret findings:')} ${brand.secondary(String(security.issues.length))}   ${brand.muted('Attack findings:')} ${brand.secondary(String(attacks.findings.length))}`);
-  out.push(`    ${brand.muted('Run')} ${brand.secondary('vibeguard security')} ${brand.muted('and')} ${brand.secondary('vibeguard attack')} ${brand.muted('for full detail')}`);
+  out.push(`    ${brand.muted('Run')} ${brand.secondary('codescout security')} ${brand.muted('and')} ${brand.secondary('codescout attack')} ${brand.muted('for full detail')}`);
   out.push('');
 
   if (sbomWritten) {
@@ -151,7 +151,7 @@ function renderAuditTerminal(opts: AuditCommandOptions, data: RenderData): void 
     out.push('');
   }
 
-  out.push(`  ${brand.muted('Tip:')} ${brand.secondary('vibeguard audit --json')} ${brand.muted('for the full machine-readable report,')} ${brand.secondary('--sbom')} ${brand.muted('to emit an SBOM')}`);
+  out.push(`  ${brand.muted('Tip:')} ${brand.secondary('codescout audit --json')} ${brand.muted('for the full machine-readable report,')} ${brand.secondary('--sbom')} ${brand.muted('to emit an SBOM')}`);
   out.push('');
 
   process.stdout.write(out.join('\n') + '\n');

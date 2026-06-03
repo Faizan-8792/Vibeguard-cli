@@ -5,7 +5,7 @@ import { FileStoreImpl } from '../storage/file-store.js';
 import { TrashStoreImpl } from '../storage/trash-store.js';
 import { SafetyContext } from '../utils/safety.js';
 import { createGitUtils } from '../utils/git-utils.js';
-import { VibeguardError, ErrorCodes } from '../utils/errors.js';
+import { CodeScoutError, ErrorCodes } from '../utils/errors.js';
 import { emitJson } from '../utils/json-output.js';
 import { header, divider, summaryLine, statusIcon, filePath, brand } from '../utils/ui.js';
 import type { CommandContext } from '../context.js';
@@ -69,7 +69,7 @@ function renderPlanOutput(result: DeadCodeScanResult): string {
     output.push('');
   }
 
-  output.push(`  ${statusIcon('success')} ${brand.success('Plan saved to')} ${brand.muted('.vibeguard/cleanup-plan.json')}`);
+  output.push(`  ${statusIcon('success')} ${brand.success('Plan saved to')} ${brand.muted('.codescout/cleanup-plan.json')}`);
   output.push(`  ${brand.muted('Run with --apply to move dead files to trash')}`);
   output.push('');
 
@@ -82,9 +82,9 @@ export async function runClean(ctx: CommandContext, opts: CleanCommandOptions): 
   // Load graph
   const graphData = await loadGraph(projectRoot);
   if (!graphData) {
-    throw new VibeguardError(
+    throw new CodeScoutError(
       ErrorCodes.CONFIG_NOT_FOUND,
-      'No graph found. Run `vibeguard map` first.',
+      'No graph found. Run `codescout map` first.',
     );
   }
 
@@ -131,9 +131,9 @@ export async function runClean(ctx: CommandContext, opts: CleanCommandOptions): 
     const plan = await fileStore.read<CleanupPlan>('cleanup-plan.json');
 
     if (!plan) {
-      throw new VibeguardError(
+      throw new CodeScoutError(
         ErrorCodes.CONFIG_NOT_FOUND,
-        'No cleanup plan found. Run `vibeguard clean --plan` first.',
+        'No cleanup plan found. Run `codescout clean --plan` first.',
       );
     }
 
@@ -141,7 +141,7 @@ export async function runClean(ctx: CommandContext, opts: CleanCommandOptions): 
 
     // Enforce limits
     if (fileCandidates.length > config.clean.maxChangesPerRun && !opts.force) {
-      throw new VibeguardError(
+      throw new CodeScoutError(
         ErrorCodes.LIMIT_EXCEEDED,
         `Cleanup plan has ${fileCandidates.length} file candidates, exceeding limit of ${config.clean.maxChangesPerRun}. Use --force to override.`,
         { count: fileCandidates.length, limit: config.clean.maxChangesPerRun }
@@ -173,7 +173,7 @@ export async function runClean(ctx: CommandContext, opts: CleanCommandOptions): 
           plannedChanges: fileCandidates.map((c: DeadCodeCandidate) => ({
             type: 'move',
             path: c.path,
-            target: `.vibeguard-trash/`,
+            target: `.codescout-trash/`,
           })),
         });
       }
@@ -214,7 +214,7 @@ export async function runClean(ctx: CommandContext, opts: CleanCommandOptions): 
         totalCandidates: fileCandidates.length,
       });
     } else {
-      logger.info(`Moved ${movedCount} files to .vibeguard-trash/`);
+      logger.info(`Moved ${movedCount} files to .codescout-trash/`);
     }
   }
 }

@@ -95,7 +95,7 @@ export async function analyzeHealth(
         deadCodeScore = 100;
       }
     } else {
-      warnings.push('No graph available for dead code analysis. Run `vibeguard map` first.');
+      warnings.push('No graph available for dead code analysis. Run `codescout map` first.');
     }
   } catch (err) {
     warnings.push(`Dead code scan failed: ${err instanceof Error ? err.message : 'unknown'}`);
