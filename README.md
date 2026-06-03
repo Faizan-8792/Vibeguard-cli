@@ -9,16 +9,15 @@
 
 <br/>
 
+[![npm](https://img.shields.io/npm/v/vibeguard-cli?style=for-the-badge&color=22c55e&logo=npm)](https://www.npmjs.com/package/vibeguard-cli)
 [![Node.js >=18](https://img.shields.io/badge/Node.js-%3E%3D18-22c55e?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![TypeScript Strict](https://img.shields.io/badge/TypeScript-strict-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tests](https://img.shields.io/badge/tests-388%20passing-16a34a?style=for-the-badge)](#-development)
-[![Health](https://img.shields.io/badge/health-93%2F100-7c3aed?style=for-the-badge)](#-project-snapshot)
 [![License: MIT](https://img.shields.io/badge/license-MIT-f59e0b?style=for-the-badge)](LICENSE)
 
 <br/>
 
-[**1. Install**](#-step-1-install-into-your-editor) ·
-[**2. Run**](#-step-2-run-it) ·
+[**1. Install**](#-step-1--install) ·
+[**2. Run**](#-step-2--run-it) ·
 [**Modes**](#-graphmode--caveman-mode) ·
 [**Features**](#-features) ·
 [**Commands**](#-command-map) ·
@@ -29,38 +28,52 @@
 
 ---
 
-## 🚀 Step 1 — Install into your editor
+## 🚀 Step 1 — Install
 
-**Pick your editor, run one command. That's the whole setup.** Each install writes the right
-integration file (rules / instructions / MCP config), creates `.vibeguard/config.json`, enables
-**Caveman Mode** + **GraphMode**, and offers to build the dependency map — in a single pass.
+The npm package is **`vibeguard-cli`**; the command it gives you is **`vibeguard`**.
+
+```bash
+# Option A — install once, globally (then `vibeguard` works anywhere)
+npm install -g vibeguard-cli
+vibeguard --run
+
+# Option B — run without installing
+npx vibeguard-cli --run
+```
+
+Requirements: **Node.js ≥ 18**. Git is optional (enables hooks + git-aware scoring).
+
+### Wire it into your editor (one-shot)
+
+Pick your editor and run one command. Each install writes the right integration file
+(rules / instructions / MCP config), creates `.vibeguard/config.json`, enables **Caveman Mode**
++ **GraphMode**, and offers to build the dependency map — all in a single pass.
 
 | Editor / Agent | One-shot install command | What it sets up |
 | --- | --- | --- |
-| **Antigravity** | `npx vibeguard antigravity install` | `AGENTS.md` rules + `.antigravity/mcp.json` MCP server |
-| **VS Code** | `npx vibeguard vscode install` | `.github/copilot-instructions.md` + `.vscode/mcp.json` MCP server |
-| **Kiro** | `npx vibeguard kiro install` | `.kiro/skills/vibeguard/` skill + steering + `.kiro/settings/mcp.json` |
-| **Cursor** | `npx vibeguard cursor install` | `.cursor/rules/vibeguard.mdc` always-on rule + `.cursor/mcp.json` |
-| **Claude Code** | `npx vibeguard claude install` | `CLAUDE.md` integration section |
-| **GitHub Copilot** | `npx vibeguard copilot install` | `.github/copilot-instructions.md` |
-| **Gemini** | `npx vibeguard gemini install` | `.gemini/CONTEXT.md` + `.gemini/settings.json` |
-| **Aider** | `npx vibeguard aider install` | `.aider.context.md` (+ `.aider.conf.yml` if absent) |
+| **Antigravity** | `npx vibeguard-cli antigravity install` | `AGENTS.md` rules + `.antigravity/mcp.json` MCP server |
+| **VS Code** | `npx vibeguard-cli vscode install` | `.github/copilot-instructions.md` + `.vscode/mcp.json` MCP server |
+| **Kiro** | `npx vibeguard-cli kiro install` | `.kiro/skills/vibeguard/` skill + steering + `.kiro/settings/mcp.json` |
+| **Cursor** | `npx vibeguard-cli cursor install` | `.cursor/rules/vibeguard.mdc` always-on rule + `.cursor/mcp.json` |
+| **Claude Code** | `npx vibeguard-cli claude install` | `CLAUDE.md` integration section |
+| **GitHub Copilot** | `npx vibeguard-cli copilot install` | `.github/copilot-instructions.md` |
+| **Gemini** | `npx vibeguard-cli gemini install` | `.gemini/CONTEXT.md` + `.gemini/settings.json` |
+| **Aider** | `npx vibeguard-cli aider install` | `.aider.context.md` (+ `.aider.conf.yml` if absent) |
 
 Generic form + opt-outs:
 
 ```bash
 # Any platform
-npx vibeguard install --platform <kiro|cursor|claude|copilot|vscode|codex|gemini|aider|antigravity>
+npx vibeguard-cli install --platform <kiro|cursor|claude|copilot|vscode|codex|gemini|aider|antigravity>
 
 # Lean install (skip a step)
-npx vibeguard install --platform vscode --no-caveman   # skip Caveman Mode
-npx vibeguard install --platform vscode --no-map       # skip the graph build
-npx vibeguard install --platform kiro --caveman ultra  # pick a Caveman level
+npx vibeguard-cli install --platform vscode --no-caveman   # skip Caveman Mode
+npx vibeguard-cli install --platform vscode --no-map       # skip the graph build
+npx vibeguard-cli install --platform kiro --caveman ultra  # pick a Caveman level
 ```
 
 > **After install, reload your editor / start a new chat** so it picks up the new rule + MCP server.
-> Requirements: **Node.js ≥ 18**. Git is optional (enables hooks + git-aware scoring).
-> Remove anytime with `npx vibeguard <platform> uninstall` — your `.vibeguard/` data is preserved.
+> Remove anytime with `npx vibeguard-cli <platform> uninstall` — your `.vibeguard/` data is preserved.
 
 ---
 
@@ -69,7 +82,8 @@ npx vibeguard install --platform kiro --caveman ultra  # pick a Caveman level
 The fastest way to use everything is the interactive menu:
 
 ```bash
-npx vibeguard --run
+vibeguard --run          # if installed globally
+npx vibeguard-cli --run  # otherwise
 ```
 
 It opens a menu ordered for a fresh project — **Quick Setup** first, then the modes, then scans:
@@ -95,10 +109,10 @@ to build the dependency map (see [GraphMode](#-graphmode--caveman-mode) below).
 Prefer flags? Every action has a one-line shortcut:
 
 ```bash
-npx vibeguard --scan      # security scan
-npx vibeguard --health    # project health score (0-100)
-npx vibeguard --graph     # build + open the dependency graph
-npx vibeguard --dead      # detect dead code
+npx vibeguard-cli --scan      # security scan
+npx vibeguard-cli --health    # project health score (0-100)
+npx vibeguard-cli --graph     # build + open the dependency graph
+npx vibeguard-cli --dead      # detect dead code
 ```
 
 ---
@@ -237,24 +251,16 @@ Every machine-facing command supports `--json` and emits a `schemaVersion` field
 
 ## 🔌 MCP Server — Live Agent Tools
 
-Instead of shelling out and screen-scraping, AI assistants can call VibeGuard's engines
-directly as **Model Context Protocol** tools over stdio. Local, zero-network (except the
-optional AI scan), **13 tools**.
-
-```bash
-vibeguard serve            # start the MCP server on stdio
-vibeguard mcp              # alias for serve
-vibeguard serve --tools get_minimal_context,pack_context,query_graph   # expose a subset
-```
-
-The per-IDE installers write the MCP config for you. Manual wiring:
+AI assistants can call VibeGuard's engines directly as **Model Context Protocol** tools over stdio.
+Local, zero-network (except the optional AI scan), **13 tools**. The per-IDE installers write the
+MCP config for you. Manual wiring:
 
 **Claude Desktop / Claude Code** — `claude_desktop_config.json` or `.mcp.json`:
 
 ```jsonc
 {
   "mcpServers": {
-    "vibeguard": { "command": "npx", "args": ["vibeguard", "serve", "--cwd", "/abs/path/to/project"] }
+    "vibeguard": { "command": "npx", "args": ["-y", "vibeguard-cli", "serve", "--cwd", "/abs/path/to/project"] }
   }
 }
 ```
@@ -264,7 +270,7 @@ The per-IDE installers write the MCP config for you. Manual wiring:
 ```jsonc
 {
   "mcpServers": {
-    "vibeguard": { "command": "npx", "args": ["vibeguard", "serve"], "disabled": false }
+    "vibeguard": { "command": "npx", "args": ["-y", "vibeguard-cli", "serve"], "disabled": false }
   }
 }
 ```
@@ -274,7 +280,7 @@ The per-IDE installers write the MCP config for you. Manual wiring:
 ```jsonc
 {
   "servers": {
-    "vibeguard": { "command": "npx", "args": ["vibeguard", "serve"] }
+    "vibeguard": { "command": "npx", "args": ["-y", "vibeguard-cli", "serve"] }
   }
 }
 ```
@@ -312,19 +318,12 @@ vibeguard graph    # render + open the interactive view
 - **2D force-directed layout** — nodes auto-arrange by connectivity, then physics freezes
 - **Group colors** — core, commands, engines, storage, utils, tests
 - **Search box** — type a filename; matches highlight, the rest dim
-- **Tap-hold + drag to pan** — move the whole map like dragging an image
 - **Click a node** — highlights connections and opens a links panel (Imports / Dependents)
 - **Degree-scaled nodes** — busier files render larger (god-node spotting)
 
 Connections are extracted from **real imports** across languages and module systems — ESM
 `import`, `export … from`, dynamic `import()`, CommonJS `require()`, plus Python/Go/Java/Markdown —
 resolved across every extension and folder/index file.
-
-<p align="center">
-  <a href="docs/assets/graph-demo.html">
-    <img src="docs/assets/graph-demo.png" alt="VibeGuard interactive dependency graph" width="100%" />
-  </a>
-</p>
 
 ---
 
@@ -334,7 +333,6 @@ resolved across every extension and folder/index file.
 | --- | --- |
 | Test suite | **388** passing — unit, integration & property-based |
 | Type gate | `npm run lint` + `npm run build` pass clean |
-| Health score | **93 / 100** |
 | Dependency graph | local, incremental, SHA-256 change detection |
 | Token benchmark | graph read ≈ **88% smaller** than full-repo read |
 
@@ -360,17 +358,11 @@ vibeguard ignore list                   # see ignored findings
 vibeguard ignore remove SEC-016-1a2b3c4d
 ```
 
-### `security` — secrets & framework misuse (18 detectors)
+### `security` — secrets & framework misuse
 
 Hard-coded credentials and risky framework usage, low-false-positive (entropy + format +
 context validation), with an `.env`/`.gitignore` gap check. Vendored / `node_modules`
 (at any depth) and minified bundles are skipped to avoid noise.
-
-- **Secrets:** OpenAI, Anthropic, AWS access key + secret, JWT secret, DB URL, Supabase,
-  Google/Gemini, GitHub token, Stripe key, Slack token, Twilio SID, PEM private keys,
-  generic api-key/token assignments.
-- **Framework:** CORS wildcard origin, `cors()` with no config, hard-coded `ACAO: *`.
-- **Hygiene:** `.env` present but missing from `.gitignore`.
 
 ### `attack` — cyberattack vulnerabilities (36 detectors, OWASP-aligned)
 
@@ -386,17 +378,11 @@ Mitigation-aware: a finding is suppressed when a matching defense is present in 
 | **Hardening** | Missing security headers (helmet/CSP), insecure cookie flags, service bound to `0.0.0.0` |
 | **Disclosure** | Sensitive data in logs, stack-trace exposure in responses |
 
-### `audit` — unified offline audit (best-of Trivy + Semgrep + CodeQL)
+### `audit` — unified offline audit
 
-`vibeguard audit` runs **five local engines** in one pass → a single **0-100 security score**.
-
-| Engine | Inspired by | What it finds |
-| --- | --- | --- |
-| Dependency audit (SCA) | Trivy | Known-vulnerable deps (bundled advisory DB), deprecated packages, risky licenses |
-| SBOM | Trivy | CycloneDX component inventory (`--sbom`) |
-| Taint dataflow | Semgrep / CodeQL | Untrusted sources → dangerous sinks (exec, eval, query, innerHTML, fetch, fs), sanitizer-aware |
-| Misconfiguration + hardening | Trivy + dev-sec | Dockerfile, `.env`, CI workflows, `tsconfig`, **SSH `sshd_config`, nginx, MySQL** baselines |
-| Secrets + attacks | — | Reuses the secret + cyberattack scanners |
+`vibeguard audit` runs **five local engines** in one pass → a single **0-100 security score**:
+dependency CVEs (SCA), CycloneDX SBOM (`--sbom`), taint dataflow (sanitizer-aware), misconfiguration
++ service hardening (Dockerfile, `.env`, CI, `tsconfig`, SSH/nginx/MySQL), plus the secret + attack scanners.
 
 Supported AI providers for `--ai`: OpenRouter, OpenAI, Anthropic, Google Gemini, DeepSeek,
 Groq, Mistral, xAI, Together, Perplexity, Fireworks, DeepInfra, Moonshot/Kimi, Ollama, and
@@ -421,7 +407,7 @@ any custom OpenAI-compatible endpoint.
 ## 🧩 Programmatic API
 
 ```ts
-import { generateContextForEditor, serializeContextPackageForAgent } from 'vibeguard';
+import { generateContextForEditor, serializeContextPackageForAgent } from 'vibeguard-cli';
 
 const pkg = await generateContextForEditor('fix auth login', { radius: 2, budget: 12000, mode: 'bugfix' });
 const markdown = serializeContextPackageForAgent(pkg);

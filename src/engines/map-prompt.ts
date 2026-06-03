@@ -62,7 +62,7 @@ RULES
 - Do not invent files. Only use paths from the file list.
 - Output must be valid JSON parseable by JSON.parse.
 
-After writing \`.vibeguard/graph.json\`, run \`npx vibeguard graph\` to render the
+After writing \`.vibeguard/graph.json\`, run \`npx vibeguard-cli graph\` to render the
 interactive HTML view from it.
 
 PROJECT FILES (${fileList.length} total)

@@ -3,7 +3,7 @@
  *
  * Exposes the VibeGuard engines as live Model Context Protocol tools over stdio,
  * so AI assistants (Claude, Cursor, Copilot, Kiro, etc.) can call them directly
- * instead of shelling out to `npx vibeguard --json` and screen-scraping.
+ * instead of shelling out to `npx vibeguard-cli --json` and screen-scraping.
  *
  * Uses the low-level Server + setRequestHandler API (rather than the Zod-based
  * McpServer helper) to keep the tool contract a plain JSON schema that mirrors

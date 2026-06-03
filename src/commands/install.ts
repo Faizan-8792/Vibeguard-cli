@@ -23,44 +23,44 @@ When the user types \`/vibeguard\` followed by a command, execute the correspond
 ### \`/vibeguard scan\`
 Run security scan on the current project. Detect hard-coded secrets, .env/.gitignore gaps, and framework misuse.
 
-Execute: \`npx vibeguard security --json\`
+Execute: \`npx vibeguard-cli security --json\`
 
 Parse the JSON output and present issues with severity, file, line, message, and suggested fix.
 
 ### \`/vibeguard health\`
 Get project health score (0-100) with sub-scores.
 
-Execute: \`npx vibeguard doctor --json\`
+Execute: \`npx vibeguard-cli doctor --json\`
 
 ### \`/vibeguard pack <task>\`
 Generate an optimized context package for a specific task (80-95% token reduction).
 
-Execute: \`npx vibeguard pack "<task>" --json\`
+Execute: \`npx vibeguard-cli pack "<task>" --json\`
 
 After generating, read \`.vibeguard/context-package.md\` and use it as context.
 
 ### \`/vibeguard dead\`
 Detect dead code: unused files, unused exports.
 
-Execute: \`npx vibeguard clean --plan --json\`
+Execute: \`npx vibeguard-cli clean --plan --json\`
 
 ### \`/vibeguard map\`
 Rebuild the dependency graph (run once after big code changes).
 
-Execute: \`npx vibeguard map --json\`
+Execute: \`npx vibeguard-cli map --json\`
 
 ### \`/vibeguard context <task>\`
 Generate context package and auto-include it in the conversation.
 
 Execute:
-1. \`npx vibeguard pack "<task>" --json\`
+1. \`npx vibeguard-cli pack "<task>" --json\`
 2. Read \`.vibeguard/context-package.md\`
 3. Use as context for subsequent responses
 
 ### \`/vibeguard fix\`
 Auto-fix security issues.
 
-Execute: \`npx vibeguard security --fix=gitignore\`
+Execute: \`npx vibeguard-cli security --fix=gitignore\`
 
 ### \`/vibeguard\`
 Show available commands.
@@ -130,7 +130,7 @@ async function withSuppressedStdout<T>(enabled: boolean, fn: () => Promise<T>): 
 /**
  * Write or merge a VibeGuard MCP server entry into a platform's MCP config file.
  * Merges into any existing config so other MCP servers are preserved.
- * Uses `npx -y vibeguard serve` so it works on any machine without absolute paths.
+ * Uses `npx -y vibeguard-cli serve` so it works on any machine without absolute paths.
  */
 async function writeMcpConfig(
   projectRoot: string,
@@ -156,7 +156,7 @@ async function writeMcpConfig(
 
   servers['vibeguard'] = {
     command: 'npx',
-    args: ['-y', 'vibeguard', 'serve'],
+    args: ['-y', 'vibeguard-cli', 'serve'],
     disabled: false,
     autoApprove: [
       'get_minimal_context',
@@ -438,16 +438,16 @@ alwaysApply: true
 # VibeGuard Integration
 
 When answering questions about this codebase:
-1. Run \`npx vibeguard pack "<user question>" --json\` to get optimized file selection
+1. Run \`npx vibeguard-cli pack "<user question>" --json\` to get optimized file selection
 2. Read only the files listed in the result (5-15 most relevant files)
 3. Never blindly read the entire project — use the dependency graph
 
 Available commands:
-- \`npx vibeguard --scan\` — Security scan
-- \`npx vibeguard --health\` — Project health score
-- \`npx vibeguard attack\` — Cyberattack vulnerability scan
-- \`npx vibeguard graph\` — Generate interactive HTML graph
-- \`npx vibeguard pack "task"\` — Generate context package (80-95% token reduction)
+- \`npx vibeguard-cli --scan\` — Security scan
+- \`npx vibeguard-cli --health\` — Project health score
+- \`npx vibeguard-cli attack\` — Cyberattack vulnerability scan
+- \`npx vibeguard-cli graph\` — Generate interactive HTML graph
+- \`npx vibeguard-cli pack "task"\` — Generate context package (80-95% token reduction)
 
 The dependency graph is at \`.vibeguard/graph.json\`. Use it to understand file relationships before answering architecture questions.
 `;
@@ -476,17 +476,17 @@ async function installClaude(projectRoot: string): Promise<void> {
 ## VibeGuard — Intelligent Context Selection
 
 When working on this codebase:
-1. Before answering questions, run: \`npx vibeguard pack "<task>" --json\`
+1. Before answering questions, run: \`npx vibeguard-cli pack "<task>" --json\`
 2. Read ONLY the files listed in the output (5-15 most relevant)
 3. Use \`.vibeguard/graph.json\` to understand file relationships
 4. Never read the entire project blindly — the graph tells you what's connected
 
 Available tools:
-- \`npx vibeguard --scan\` — Find secrets & vulnerabilities
-- \`npx vibeguard --health\` — Project quality score (0-100)
-- \`npx vibeguard attack --ai --fix\` — AI-powered security fix
-- \`npx vibeguard graph\` — Generate interactive dependency graph
-- \`npx vibeguard pack "task"\` — Get optimized context (80-95% fewer tokens)
+- \`npx vibeguard-cli --scan\` — Find secrets & vulnerabilities
+- \`npx vibeguard-cli --health\` — Project quality score (0-100)
+- \`npx vibeguard-cli attack --ai --fix\` — AI-powered security fix
+- \`npx vibeguard-cli graph\` — Generate interactive dependency graph
+- \`npx vibeguard-cli pack "task"\` — Get optimized context (80-95% fewer tokens)
 `;
 
   const claudePath = join(projectRoot, 'CLAUDE.md');
@@ -526,19 +526,19 @@ When working on this codebase, use VibeGuard for intelligent context selection a
 
 ## Context Selection
 Before answering questions about architecture or making multi-file changes:
-1. Run \`npx vibeguard pack "<task>" --json\` to get the optimal file set
+1. Run \`npx vibeguard-cli pack "<task>" --json\` to get the optimal file set
 2. Read ONLY the files listed in the output (5-15 most relevant files)
 3. Use \`.vibeguard/graph.json\` to understand file relationships
 4. Never read the entire project blindly — the graph tells you what's connected
 
 ## Available Commands
-- \`npx vibeguard --scan\` — Find secrets & security vulnerabilities
-- \`npx vibeguard --health\` — Project quality score (0-100)
-- \`npx vibeguard --dead\` — Detect unused code
-- \`npx vibeguard attack\` — Cyberattack vulnerability scan
-- \`npx vibeguard attack --ai --fix\` — AI-powered security fix
-- \`npx vibeguard graph\` — Generate interactive HTML dependency graph
-- \`npx vibeguard pack "task"\` — Get optimized context (80-95% fewer tokens)
+- \`npx vibeguard-cli --scan\` — Find secrets & security vulnerabilities
+- \`npx vibeguard-cli --health\` — Project quality score (0-100)
+- \`npx vibeguard-cli --dead\` — Detect unused code
+- \`npx vibeguard-cli attack\` — Cyberattack vulnerability scan
+- \`npx vibeguard-cli attack --ai --fix\` — AI-powered security fix
+- \`npx vibeguard-cli graph\` — Generate interactive HTML dependency graph
+- \`npx vibeguard-cli pack "task"\` — Get optimized context (80-95% fewer tokens)
 
 ## Workflow
 - Before architecture questions: run \`pack\` first
@@ -573,19 +573,19 @@ When working on this codebase, use VibeGuard for intelligent context selection a
 
 ## Context Selection
 Before answering questions about architecture or making multi-file changes:
-1. Run \`npx vibeguard pack "<task>" --json\` to get the optimal file set
+1. Run \`npx vibeguard-cli pack "<task>" --json\` to get the optimal file set
 2. Read ONLY the files listed in the output (5-15 most relevant files)
 3. Use \`.vibeguard/graph.json\` to understand file relationships
 4. Never read the entire project blindly — the graph tells you what's connected
 
 ## Available Commands
-- \`npx vibeguard --scan\` — Find secrets & security vulnerabilities
-- \`npx vibeguard --health\` — Project quality score (0-100)
-- \`npx vibeguard --dead\` — Detect unused code
-- \`npx vibeguard attack\` — Cyberattack vulnerability scan
-- \`npx vibeguard attack --ai --fix\` — AI-powered security fix
-- \`npx vibeguard graph\` — Generate interactive HTML dependency graph
-- \`npx vibeguard pack "task"\` — Get optimized context (80-95% fewer tokens)
+- \`npx vibeguard-cli --scan\` — Find secrets & security vulnerabilities
+- \`npx vibeguard-cli --health\` — Project quality score (0-100)
+- \`npx vibeguard-cli --dead\` — Detect unused code
+- \`npx vibeguard-cli attack\` — Cyberattack vulnerability scan
+- \`npx vibeguard-cli attack --ai --fix\` — AI-powered security fix
+- \`npx vibeguard-cli graph\` — Generate interactive HTML dependency graph
+- \`npx vibeguard-cli pack "task"\` — Get optimized context (80-95% fewer tokens)
 
 ## Workflow
 - Before architecture questions: run \`pack\` first
@@ -643,33 +643,33 @@ This project uses VibeGuard for static analysis, security scanning, and intellig
 
 ### Get Optimized Context (80-95% fewer tokens)
 \`\`\`bash
-npx vibeguard pack "your task description"
+npx vibeguard-cli pack "your task description"
 \`\`\`
 Then read \`.vibeguard/context-package.md\` for the focused file set.
 
 ### Security Scan
 \`\`\`bash
-npx vibeguard --scan
+npx vibeguard-cli --scan
 \`\`\`
 
 ### Project Health Score
 \`\`\`bash
-npx vibeguard --health
+npx vibeguard-cli --health
 \`\`\`
 
 ### Dependency Graph
 \`\`\`bash
-npx vibeguard --graph
+npx vibeguard-cli --graph
 \`\`\`
 
 ### Dead Code Detection
 \`\`\`bash
-npx vibeguard --dead
+npx vibeguard-cli --dead
 \`\`\`
 
 ### Cyberattack Scan with AI Fix
 \`\`\`bash
-npx vibeguard attack --ai --fix
+npx vibeguard-cli attack --ai --fix
 \`\`\`
 
 ## Key Conventions
@@ -731,17 +731,17 @@ VS Code's built-in Copilot Chat reads \`.github/copilot-instructions.md\`. When 
 on this codebase, use VibeGuard for intelligent context selection and security scanning.
 
 ## Context Selection
-1. Run \`npx vibeguard pack "<task>" --json\` to get the optimal file set
+1. Run \`npx vibeguard-cli pack "<task>" --json\` to get the optimal file set
 2. Read ONLY the files listed (5-15 most relevant) — never read the whole project
 3. Use \`.vibeguard/graph.json\` to understand file relationships
 
 ## Available Commands
-- \`npx vibeguard --scan\` — secrets & security vulnerabilities
-- \`npx vibeguard --health\` — project quality score (0-100)
-- \`npx vibeguard attack\` — cyberattack vulnerability scan
-- \`npx vibeguard audit\` — unified security audit (deps, taint, misconfig, secrets, attacks)
-- \`npx vibeguard graph\` — interactive HTML dependency graph
-- \`npx vibeguard pack "task"\` — optimized context (80-95% fewer tokens)
+- \`npx vibeguard-cli --scan\` — secrets & security vulnerabilities
+- \`npx vibeguard-cli --health\` — project quality score (0-100)
+- \`npx vibeguard-cli attack\` — cyberattack vulnerability scan
+- \`npx vibeguard-cli audit\` — unified security audit (deps, taint, misconfig, secrets, attacks)
+- \`npx vibeguard-cli graph\` — interactive HTML dependency graph
+- \`npx vibeguard-cli pack "task"\` — optimized context (80-95% fewer tokens)
 
 ## Live MCP Tools
 This project also configures a VibeGuard MCP server in \`.vscode/mcp.json\`, exposing
@@ -773,11 +773,11 @@ async function installCodex(projectRoot: string): Promise<void> {
 
 When working on this codebase, use VibeGuard (a local CLI) for context selection and security.
 
-- Before multi-file changes or architecture questions: \`npx vibeguard pack "<task>" --json\`,
+- Before multi-file changes or architecture questions: \`npx vibeguard-cli pack "<task>" --json\`,
   then read ONLY the 5-15 listed files. Never read the whole project blindly.
-- Security: \`npx vibeguard audit --json\` (deps, taint, misconfig, secrets, attacks → 0-100 score),
-  \`npx vibeguard attack --json\`, \`npx vibeguard --scan\`.
-- Graph Q&A (zero tokens): \`npx vibeguard query "<question>" --json\`, \`explain\`, \`affected\`.
+- Security: \`npx vibeguard-cli audit --json\` (deps, taint, misconfig, secrets, attacks → 0-100 score),
+  \`npx vibeguard-cli attack --json\`, \`npx vibeguard-cli --scan\`.
+- Graph Q&A (zero tokens): \`npx vibeguard-cli query "<question>" --json\`, \`explain\`, \`affected\`.
 - Key files: \`.vibeguard/graph.json\`, \`.vibeguard/context-package.md\`.
 `;
 
@@ -820,11 +820,11 @@ async function installAntigravity(projectRoot: string): Promise<void> {
 
 When working on this codebase, use VibeGuard (a local CLI) for context selection and security.
 
-- Before multi-file changes or architecture questions: \`npx vibeguard pack "<task>" --json\`,
+- Before multi-file changes or architecture questions: \`npx vibeguard-cli pack "<task>" --json\`,
   then read ONLY the 5-15 listed files. Never read the whole project blindly.
-- Security: \`npx vibeguard audit --json\` (deps, taint, misconfig, secrets, attacks → 0-100 score),
-  \`npx vibeguard attack --json\`, \`npx vibeguard --scan\`.
-- Graph Q&A (zero tokens): \`npx vibeguard query "<question>" --json\`, \`explain\`, \`affected\`.
+- Security: \`npx vibeguard-cli audit --json\` (deps, taint, misconfig, secrets, attacks → 0-100 score),
+  \`npx vibeguard-cli attack --json\`, \`npx vibeguard-cli --scan\`.
+- Graph Q&A (zero tokens): \`npx vibeguard-cli query "<question>" --json\`, \`explain\`, \`affected\`.
 - Live MCP tools are configured in \`.antigravity/mcp.json\`.
 `;
 

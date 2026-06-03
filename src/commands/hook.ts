@@ -16,7 +16,7 @@ const PRE_COMMIT_HOOK = `#!/bin/sh
 # To bypass: git commit --no-verify
 
 # Run security scan
-RESULT=$(node ./node_modules/.bin/../vibeguard/dist/cli.js security --json 2>/dev/null || npx vibeguard security --json 2>/dev/null)
+RESULT=$(node ./node_modules/.bin/../vibeguard-cli/dist/cli.js security --json 2>/dev/null || npx vibeguard-cli security --json 2>/dev/null)
 
 if [ -z "$RESULT" ]; then
   exit 0
@@ -47,9 +47,9 @@ if echo "$BLOCK" | grep -q "^BLOCK:"; then
   echo ""
   echo "   Found: $CRITICAL critical, $HIGH high severity issues"
   echo ""
-  echo "   Run: npx vibeguard --scan    (to see details)"
-  echo "   Fix: npx vibeguard security --fix gitignore"
-  echo "        npx vibeguard security --fix env"
+  echo "   Run: npx vibeguard-cli --scan    (to see details)"
+  echo "   Fix: npx vibeguard-cli security --fix gitignore"
+  echo "        npx vibeguard-cli security --fix env"
   echo ""
   echo "   Bypass: git commit --no-verify"
   echo ""
@@ -75,7 +75,7 @@ DOCS=$(echo "$CHANGED" | grep -E '\\.(md|mdx)$' || true)
 
 if [ -n "$CODE" ]; then
   echo "🔄 VibeGuard: code changed, rebuilding graph..."
-  (node ./node_modules/vibeguard/dist/cli.js map --quiet 2>/dev/null || npx vibeguard map --quiet 2>/dev/null) &
+  (node ./node_modules/vibeguard-cli/dist/cli.js map --quiet 2>/dev/null || npx vibeguard-cli map --quiet 2>/dev/null) &
 elif [ -n "$DOCS" ]; then
   echo "📝 VibeGuard: docs changed. Run 'vibeguard map' to refresh doc links."
 fi

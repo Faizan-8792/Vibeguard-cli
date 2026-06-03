@@ -77,10 +77,10 @@ This rule is ACTIVE on EVERY response until the user says "stop graphmode" or
 
 ## Core rules
 - Before answering architecture questions or making multi-file changes, run
-  \`npx vibeguard pack "<task>" --json\` and read ONLY the listed files (5-15).
+  \`npx vibeguard-cli pack "<task>" --json\` and read ONLY the listed files (5-15).
 - Use \`.vibeguard/graph.json\` to understand imports/dependents before editing.
 - Never read the entire project blindly — the graph tells you what's connected.
-- Prefer \`npx vibeguard query\`, \`explain\`, \`affected\` for graph Q&A (zero tokens).
+- Prefer \`npx vibeguard-cli query\`, \`explain\`, \`affected\` for graph Q&A (zero tokens).
 
 > The win: 80-95% fewer tokens by reading the right files, not all the files.`;
 }

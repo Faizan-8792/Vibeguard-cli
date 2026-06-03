@@ -218,10 +218,10 @@ export function quickStart(): string {
 
   lines.push(`  ${brand.primary.bold('Quick Start')}`);
   lines.push('');
-  lines.push(`  ${brand.secondary('$')} ${chalk.white('npx vibeguard --scan')}       ${brand.muted('Scan for security issues')}`);
-  lines.push(`  ${brand.secondary('$')} ${chalk.white('npx vibeguard --health')}     ${brand.muted('Get project health score')}`);
-  lines.push(`  ${brand.secondary('$')} ${chalk.white('npx vibeguard --graph')}      ${brand.muted('Build dependency graph')}`);
-  lines.push(`  ${brand.secondary('$')} ${chalk.white('npx vibeguard --dead')}       ${brand.muted('Detect dead code')}`);
+  lines.push(`  ${brand.secondary('$')} ${chalk.white('npx vibeguard-cli --scan')}       ${brand.muted('Scan for security issues')}`);
+  lines.push(`  ${brand.secondary('$')} ${chalk.white('npx vibeguard-cli --health')}     ${brand.muted('Get project health score')}`);
+  lines.push(`  ${brand.secondary('$')} ${chalk.white('npx vibeguard-cli --graph')}      ${brand.muted('Build dependency graph')}`);
+  lines.push(`  ${brand.secondary('$')} ${chalk.white('npx vibeguard-cli --dead')}       ${brand.muted('Detect dead code')}`);
   lines.push('');
   lines.push(`  ${brand.primary.bold('Commands')}`);
   lines.push('');

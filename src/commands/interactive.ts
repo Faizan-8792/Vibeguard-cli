@@ -160,7 +160,7 @@ async function pauseForReturn(): Promise<void> {
 /**
  * Quick Setup: one action = init config + build graph + enable caveman. Makes
  * the project fully ready for VibeGuard in a single menu pick (equivalent to
- * running `npx vibeguard init` from the terminal).
+ * running `npx vibeguard-cli init` from the terminal).
  */
 async function runQuickSetupInteractive(ctx: CommandContext): Promise<void> {
   const output: string[] = [];
@@ -802,7 +802,7 @@ async function runTrashInteractive(ctx: CommandContext): Promise<void> {
     }
     output.push('');
     output.push(`  ${brand.info('💡 To restore:')}`);
-    output.push(`     ${brand.secondary('npx vibeguard trash restore <id>')}`);
+    output.push(`     ${brand.secondary('npx vibeguard-cli trash restore <id>')}`);
   }
 
   process.stdout.write(output.join('\n') + '\n');

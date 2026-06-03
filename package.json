@@ -1,19 +1,22 @@
 {
-  "name": "vibeguard",
-  "version": "0.1.0",
+  "name": "vibeguard-cli",
+  "version": "1.0.14",
   "description": "Local-only CLI that makes AI coding assistants understand your codebase 80-95% cheaper. Security scanning, dead code detection, cyberattack protection, and intelligent context packaging.",
   "type": "module",
   "author": "Faizan <faizan8792@github>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Faizan-8792/VIBEGUARD-.git"
+    "url": "https://github.com/Faizan-8792/Vibeguard-cli.git"
   },
-  "homepage": "https://github.com/Faizan-8792/VIBEGUARD-#readme",
+  "homepage": "https://github.com/Faizan-8792/Vibeguard-cli#readme",
   "engines": {
     "node": ">=18"
   },
   "bin": {
     "vibeguard": "./dist/cli.js"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "files": [
     "dist/",
