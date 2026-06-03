@@ -99,8 +99,9 @@ function buildHTML(
       display: flex;
       flex-direction: column;
     }
-    /* Auto-hide top header: hidden by default, slides in on cursor-to-top or
-       scroll-up. Fixed overlay so it never steals layout space from the graph. */
+    /* Single auto-hide navbar: hidden by default, slides in on cursor-to-top or
+       scroll-up. Fixed overlay so it never steals layout space from the graph.
+       Holds the title/stats row AND the controls row — one bar, one motion. */
     #header {
       position: fixed;
       top: 0;
@@ -110,15 +111,15 @@ function buildHTML(
       transform: translateY(-100%);
       transition: transform 0.25s ease;
       background: linear-gradient(135deg, #ffffff 0%, #eef1fa 100%);
-      padding: 16px 24px;
+      padding: 12px 24px;
       display: flex;
-      align-items: center;
-      justify-content: space-between;
+      flex-direction: column;
+      gap: 10px;
       border-bottom: 1px solid #d8def0;
-      box-shadow: 0 1px 8px rgba(80, 90, 130, 0.06);
+      box-shadow: 0 2px 12px rgba(80, 90, 130, 0.10);
     }
     #header.visible { transform: translateY(0); }
-    /* Thin always-present hover strip at the very top to summon the header. */
+    /* Thin always-present hover strip at the very top to summon the navbar. */
     #header-trigger {
       position: fixed;
       top: 0;
@@ -126,6 +127,12 @@ function buildHTML(
       right: 0;
       height: 12px;
       z-index: 199;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
     }
     #header h1 {
       font-size: 18px;
@@ -143,12 +150,10 @@ function buildHTML(
       font-weight: bold;
     }
     #controls {
-      padding: 12px 24px;
-      background: #ffffff;
       display: flex;
       gap: 12px;
       align-items: center;
-      border-bottom: 1px solid #e3e7f2;
+      flex-wrap: wrap;
     }
     #controls input {
       background: #f5f7fc;
@@ -240,21 +245,23 @@ function buildHTML(
 <body>
   <div id="header-trigger"></div>
   <div id="header">
-    <h1>🛡️ CodeScout — Dependency Graph</h1>
-    <div class="stats">
-      <span>${nodeCount}</span> nodes &nbsp;•&nbsp; <span>${edgeCount}</span> edges &nbsp;•&nbsp; Generated ${new Date().toLocaleDateString()}
+    <div class="header-top">
+      <h1>🛡️ CodeScout — Dependency Graph</h1>
+      <div class="stats">
+        <span>${nodeCount}</span> nodes &nbsp;•&nbsp; <span>${edgeCount}</span> edges &nbsp;•&nbsp; Generated ${new Date().toLocaleDateString()}
+      </div>
     </div>
-  </div>
-  <div id="controls">
-    <input type="text" id="search" placeholder="🔍 Search files..." />
-    <button onclick="resetView()">⤢ Reset View</button>
-    <button id="play-pause-btn" onclick="togglePhysics()">⏸ Pause</button>
-    <div class="legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div>Core</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>Commands</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Engines</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Storage</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#6b7280"></div>Utils</div>
+    <div id="controls">
+      <input type="text" id="search" placeholder="🔍 Search files..." />
+      <button onclick="resetView()">⤢ Reset View</button>
+      <button id="play-pause-btn" onclick="togglePhysics()">⏸ Pause</button>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div>Core</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>Commands</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Engines</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Storage</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#6b7280"></div>Utils</div>
+      </div>
     </div>
   </div>
   <div id="graph"></div>
