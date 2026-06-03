@@ -179,18 +179,41 @@ function buildHTML(
     #graph { width: 100%; height: calc(100vh - 110px); }
     #tooltip {
       position: absolute;
+      top: 120px;
+      right: 16px;
       background: #ffffff;
       border: 1px solid #d8def0;
-      border-radius: 8px;
-      padding: 12px;
+      border-radius: 10px;
+      padding: 14px 16px;
       font-size: 12px;
       line-height: 1.5;
       color: #2b3245;
       display: none;
       z-index: 100;
-      max-width: 300px;
+      width: 320px;
+      max-height: calc(100vh - 160px);
+      overflow-y: auto;
       box-shadow: 0 6px 24px rgba(80, 90, 130, 0.18);
     }
+    #tooltip .lp-title {
+      font-weight: bold;
+      color: #6d28d9;
+      word-break: break-all;
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #eef1fa;
+    }
+    #tooltip .lp-h {
+      font-weight: bold;
+      color: #0891b2;
+      margin: 10px 0 4px;
+    }
+    #tooltip .lp-i {
+      color: #4b5563;
+      word-break: break-all;
+      padding: 1px 0 1px 10px;
+    }
+    #tooltip .lp-m { color: #9ca3af; font-style: italic; padding-left: 10px; }
   </style>
 </head>
 <body>
@@ -250,7 +273,14 @@ function buildHTML(
         forceAtlas2Based: { gravitationalConstant: -80, springLength: 120 },
         stabilization: { iterations: 200 },
       },
-      interaction: { hover: true, tooltipDelay: 200, zoomView: true },
+      interaction: {
+        hover: false,
+        dragView: true,      // click/tap-hold on empty space pans the whole map
+        dragNodes: true,     // drag an individual node to reposition it
+        zoomView: true,
+        navigationButtons: true,
+        keyboard: { enabled: true, bindToWindow: false },
+      },
       layout: { improvedLayout: true },
     });
 
@@ -286,11 +316,41 @@ function buildHTML(
       setNodeOpacity(() => true);
     }
 
+    // Split a node's connections into outgoing (imports) and incoming (dependents)
+    // using the edge list, so a click can list the actual linked files.
+    function linkedFiles(focusId) {
+      const imports = [];
+      const dependents = [];
+      for (const e of edgesData) {
+        if (e.from === focusId) imports.push(e.to);
+        else if (e.to === focusId) dependents.push(e.from);
+      }
+      return { imports, dependents };
+    }
+
+    // Pinned info panel showing the clicked file and the files it links to.
+    const panel = document.getElementById('tooltip');
+    function showLinksPanel(focusId) {
+      const { imports, dependents } = linkedFiles(focusId);
+      const list = (label, arr) => arr.length
+        ? '<div class="lp-h">' + label + ' (' + arr.length + ')</div>' +
+          arr.slice(0, 30).map(f => '<div class="lp-i">' + f + '</div>').join('') +
+          (arr.length > 30 ? '<div class="lp-m">… and ' + (arr.length - 30) + ' more</div>' : '')
+        : '<div class="lp-h">' + label + ' (0)</div><div class="lp-m">none</div>';
+      panel.innerHTML =
+        '<div class="lp-title">' + focusId + '</div>' +
+        list('→ Imports', imports) +
+        list('← Dependents', dependents);
+      panel.style.display = 'block';
+    }
+    function hideLinksPanel() { panel.style.display = 'none'; }
+
     // Search
     document.getElementById('search').addEventListener('input', function(e) {
       const query = e.target.value.toLowerCase();
       if (!query) {
         restoreOpacity();
+        hideLinksPanel();
         return;
       }
       setNodeOpacity(n => n.id.toLowerCase().includes(query) || n.label.toLowerCase().includes(query));
@@ -300,20 +360,18 @@ function buildHTML(
       }
     });
 
-    // Click to highlight connections
+    // Click a node → highlight its connections AND list the linked files.
+    // Click empty space → clear everything.
     network.on('click', function(params) {
       if (params.nodes.length > 0) {
-        highlightConnections(params.nodes[0]);
+        const id = params.nodes[0];
+        highlightConnections(id);
+        showLinksPanel(id);
       } else {
         restoreOpacity();
+        hideLinksPanel();
       }
     });
-
-    // Hover to highlight which files are linked (dim the rest); restore on blur.
-    network.on('hoverNode', function(params) {
-      highlightConnections(params.node);
-    });
-    network.on('blurNode', restoreOpacity);
   </script>
 </body>
 </html>`;

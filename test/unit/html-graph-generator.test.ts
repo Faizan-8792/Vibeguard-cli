@@ -43,12 +43,22 @@ describe('generateHTMLGraph (vis-network 2D)', () => {
     expect(html).not.toContain('3d-force-graph');
   });
 
-  it('highlights connected nodes on hover and on click, restoring on blur', async () => {
+  it('shows file links on click (panel) and no longer uses hover highlighting', async () => {
     const html = await render();
     expect(html).toContain('getConnectedNodes');
-    expect(html).toContain("network.on('hoverNode'");
-    expect(html).toContain("network.on('blurNode'");
     expect(html).toContain("network.on('click'");
+    expect(html).toContain('showLinksPanel');
+    expect(html).toContain('linkedFiles');
+    // Hover highlight removed per UX request.
+    expect(html).not.toContain("network.on('hoverNode'");
+    expect(html).not.toContain("network.on('blurNode'");
+    expect(html).toContain('hover: false');
+  });
+
+  it('enables map panning and node dragging', async () => {
+    const html = await render();
+    expect(html).toContain('dragView: true');
+    expect(html).toContain('dragNodes: true');
   });
 
   it('has search and view controls including a Play/Pause toggle', async () => {
